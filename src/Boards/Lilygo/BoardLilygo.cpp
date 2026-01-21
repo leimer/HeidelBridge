@@ -28,7 +28,7 @@ constexpr uint8_t Pin_WS2812 = 4;
 
 // Constructor
 BoardLilygo::BoardLilygo()
-    : Board(PinRX, PinTX, PinRTS, true, false)  // Has WiFi, no Ethernet
+    : Board(PinRX, PinTX, PinRTS)
 {
   // Nothing to do
 }
@@ -50,4 +50,15 @@ void BoardLilygo::Init()
 void BoardLilygo::Print()
 {
   Logger::Print("LILYGO T-CAN485");
+}
+
+// Network capability interfaces
+bool BoardLilygo::HasWiFi()
+{
+  return true;
+}
+
+bool BoardLilygo::HasEthernet()
+{
+  return false;
 }

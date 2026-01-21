@@ -20,7 +20,7 @@ constexpr uint8_t PinRTS = GPIO_NUM_13;
 
 // Constructor
 BoardOlimex::BoardOlimex()
-    : Board(PinRX, PinTX, PinRTS, true, true)  // Has WiFi and Ethernet
+    : Board(PinRX, PinTX, PinRTS)
 {
   // Nothing to do
 }
@@ -37,4 +37,15 @@ void BoardOlimex::Init()
 void BoardOlimex::Print()
 {
   Logger::Print("Olimex ESP32-POE-ISO with MOD-RS485 via UEXT");
+}
+
+// Network capability interfaces
+bool BoardOlimex::HasWiFi()
+{
+  return true;
+}
+
+bool BoardOlimex::HasEthernet()
+{
+  return true;
 }
