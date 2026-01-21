@@ -57,11 +57,14 @@ namespace EthernetConnection
         // ETH.begin(PHY_ADDR, PHY_POWER, PHY_MDC, PHY_MDIO, PHY_TYPE, CLK_MODE)
         // Olimex ESP32-POE-ISO uses:
         // PHY_ADDR = 0
-        // PHY_POWER = -1 (not used, powered externally)
+        // PHY_POWER = -1 (no GPIO control - PHY powered from PoE circuit)
         // PHY_MDC = 23
         // PHY_MDIO = 18
         // PHY_TYPE = ETH_PHY_LAN8720
         // CLK_MODE = ETH_CLOCK_GPIO17_OUT
+        //
+        // Note: PoE power is managed by Si3402-B chip on the board.
+        //       The PHY is always powered when PoE is connected - no GPIO control needed.
         ETH.begin(0, -1, 23, 18, ETH_PHY_LAN8720, ETH_CLOCK_GPIO17_OUT);
 
         // Wait for DHCP to assign an IP (with timeout)
