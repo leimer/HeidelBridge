@@ -15,15 +15,32 @@ document.addEventListener("DOMContentLoaded", async function () {
         document.getElementById("device-name").value = data["device-name"];
         document.getElementById("wifi-ssid").value = data["wifi-ssid"];
         document.getElementById("wifi-password").value = data["wifi-password"];
+        document.getElementById("ethernet-static-ip-enabled").checked = !data["ethernet-dhcp-enabled"];
+        document.getElementById("ethernet-static-ip").value = data["ethernet-static-ip"] || "";
+        document.getElementById("ethernet-subnet").value = data["ethernet-subnet"] || "";
+        document.getElementById("ethernet-gateway").value = data["ethernet-gateway"] || "";
+        document.getElementById("ethernet-dns").value = data["ethernet-dns"] || "";
         document.getElementById("mqtt-enabled").checked = data["mqtt-enabled"];
         document.getElementById("mqtt-server").value = data["mqtt-server"];
         document.getElementById("mqtt-port").value = data["mqtt-port"];
         document.getElementById("mqtt-user").value = data["mqtt-user"];
         document.getElementById("mqtt-password").value = data["mqtt-password"];
+        
+        // Update static IP fields visibility
+        updateStaticIPFieldsVisibility();
     } catch (error) {
         console.error(`Error: ${error.message}`);
     }
+    
+    // Add event listener for static IP checkbox
+    document.getElementById("ethernet-static-ip-enabled").addEventListener("change", updateStaticIPFieldsVisibility);
 });
+
+function updateStaticIPFieldsVisibility() {
+    const isStaticIP = document.getElementById("ethernet-static-ip-enabled").checked;
+    const staticIPFields = document.getElementById("static-ip-fields");
+    staticIPFields.style.display = isStaticIP ? "block" : "none";
+}
 
 function messageBox(title, text) {
     document.getElementById("message-box-title").textContent = title;
@@ -37,6 +54,11 @@ function writeSettings() {
         "device-name": document.getElementById("device-name").value,
         "wifi-ssid": document.getElementById("wifi-ssid").value,
         "wifi-password": document.getElementById("wifi-password").value,
+        "ethernet-dhcp-enabled": !document.getElementById("ethernet-static-ip-enabled").checked,
+        "ethernet-static-ip": document.getElementById("ethernet-static-ip").value,
+        "ethernet-subnet": document.getElementById("ethernet-subnet").value,
+        "ethernet-gateway": document.getElementById("ethernet-gateway").value,
+        "ethernet-dns": document.getElementById("ethernet-dns").value,
         "mqtt-enabled": document.getElementById("mqtt-enabled").checked,
         "mqtt-server": document.getElementById("mqtt-server").value,
         "mqtt-port": parseInt(document.getElementById("mqtt-port").value),

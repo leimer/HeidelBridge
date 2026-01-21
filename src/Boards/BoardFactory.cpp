@@ -5,6 +5,7 @@
 // All supported boards
 #include "ESP32/BoardESP32.h"
 #include "Lilygo/BoardLilygo.h"
+#include "Olimex/BoardOlimex.h"
 
 // Factory instance
 BoardFactory *BoardFactory::Instance()
@@ -20,6 +21,8 @@ Board *BoardFactory::GetBoard()
   static BoardESP32 boardInstance;
 #elif BOARD_LILYGO
   static BoardLilygo boardInstance;
+#elif BOARD_OLIMEX
+  static BoardOlimex boardInstance;
 #endif
 
   return &boardInstance;

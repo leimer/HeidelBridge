@@ -32,6 +32,21 @@
         <input type="password" id="wifi-password" name="wifi-password" placeholder="Password" />
 
 
+        <h3>Network Configuration</h3>
+
+        <label for="ethernet-static-ip-enabled" style="margin-bottom: 12px;">
+            <input type="checkbox" id="ethernet-static-ip-enabled" name="ethernet-static-ip-enabled" />
+            Use Static IP (for Ethernet)
+        </label>
+
+        <div id="static-ip-fields">
+            <input type="text" id="ethernet-static-ip" name="ethernet-static-ip" placeholder="IP Address (e.g., 192.168.1.100)" />
+            <input type="text" id="ethernet-subnet" name="ethernet-subnet" placeholder="Subnet Mask (e.g., 255.255.255.0)" />
+            <input type="text" id="ethernet-gateway" name="ethernet-gateway" placeholder="Gateway (e.g., 192.168.1.1)" />
+            <input type="text" id="ethernet-dns" name="ethernet-dns" placeholder="DNS Server (e.g., 192.168.1.1)" />
+        </div>
+
+
         <h3>MQTT</h3>
 
         <label for="mqtt-enabled" style="margin-bottom: 12px;">

@@ -3,7 +3,10 @@
 #include <DNSServer.h>
 #include "../../Configuration/Constants.h"
 #include "../../Configuration/Settings.h"
+#include "../../Boards/BoardFactory.h"
+#include "../../Boards/Board.h"
 #include "CaptivePortal.h"
+#include "../Ethernet/EthernetConnection.h"
 #include "../Logger/Logger.h"
 
 namespace CaptivePortal
@@ -15,6 +18,14 @@ namespace CaptivePortal
     // Starts the captive portal
     void Start()
     {
+        // Don't start captive portal if ethernet is connected
+        if (BoardFactory::Instance()->GetBoard()->HasEthernet() && 
+            EthernetConnection::IsConnected())
+        {
+            Logger::Info("Ethernet connected, captive portal disabled");
+            return;
+        }
+
         // Local IP used in captive portal mode
         const IPAddress localIp(4, 3, 2, 1);
         const IPAddress gatewayIp(4, 3, 2, 1);

@@ -1,5 +1,33 @@
 #!/bin/bash
 
+# ====================================================================
+# build-resources.sh - Convert web files to C++ header files
+# ====================================================================
+#
+# PURPOSE:
+#   Converts static web files (HTML, CSS, JS, images) from the data/
+#   directory into C++ header files that can be embedded in firmware.
+#
+# WHEN TO RUN:
+#   ✅ Run this script ONLY when you modify web interface files
+#   ❌ NOT needed for normal firmware builds (headers already exist)
+#
+# USAGE:
+#   ./build-resources.sh
+#
+# WHAT IT DOES:
+#   1. Reads files from ./data/ directory
+#   2. Converts each file to a byte array using xxd
+#   3. Creates C++ header files in ./data/headers/
+#   4. Headers are included in WebServer.cpp for serving web content
+#
+# REQUIREMENTS:
+#   - xxd utility (usually part of vim package)
+#   - Bash shell
+#
+# For more information, see docs/BuildProcess.md
+# ====================================================================
+
 # Hardcoded input directory
 INPUT_DIR="./data"
 OUTPUT_DIR="$INPUT_DIR/headers"
