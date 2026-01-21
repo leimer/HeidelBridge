@@ -4,6 +4,7 @@
 #include "../../Configuration/Constants.h"
 #include "../../Configuration/Settings.h"
 #include "CaptivePortal.h"
+#include "EthernetConnection.h"
 #include "../Logger/Logger.h"
 
 namespace CaptivePortal
@@ -15,6 +16,15 @@ namespace CaptivePortal
     // Starts the captive portal
     void Start()
     {
+#ifdef BOARD_OLIMEX
+        // Don't start captive portal if ethernet is connected
+        if (EthernetConnection::IsConnected())
+        {
+            Logger::Info("Ethernet connected, captive portal disabled");
+            return;
+        }
+#endif
+
         // Local IP used in captive portal mode
         const IPAddress localIp(4, 3, 2, 1);
         const IPAddress gatewayIp(4, 3, 2, 1);
