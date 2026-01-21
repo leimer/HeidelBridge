@@ -20,7 +20,7 @@ void WifiManager::Start()
     Logger::Info("Starting network manager");
 
 #ifdef BOARD_OLIMEX
-    // For Olimex ESP32-POE, initialize ethernet first
+    // For Olimex ESP32-POE-ISO, initialize ethernet first
     EthernetConnection::Init();
     
     // Wait a bit for ethernet to connect

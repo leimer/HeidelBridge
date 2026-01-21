@@ -53,9 +53,9 @@ namespace EthernetConnection
 
         WiFi.onEvent(WiFiEvent);
 
-        // For Olimex ESP32-POE, PHY is LAN8720
+        // For Olimex ESP32-POE-ISO, PHY is LAN8720A
         // ETH.begin(PHY_ADDR, PHY_POWER, PHY_MDC, PHY_MDIO, PHY_TYPE, CLK_MODE)
-        // Olimex ESP32-POE uses:
+        // Olimex ESP32-POE-ISO uses:
         // PHY_ADDR = 0
         // PHY_POWER = -1 (not used, powered externally)
         // PHY_MDC = 23

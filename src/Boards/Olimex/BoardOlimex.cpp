@@ -30,5 +30,5 @@ void BoardOlimex::Init()
 // Logs board name/information
 void BoardOlimex::Print()
 {
-  Logger::Print("Olimex ESP32-POE with MOD-RS485");
+  Logger::Print("Olimex ESP32-POE-ISO with MOD-RS485");
 }
