@@ -46,11 +46,9 @@ namespace EthernetConnection
         }
     }
 
-    // Initializes ethernet with DHCP, fallback to APIPA if DHCP fails
+    // Initializes ethernet with DHCP or static IP
     void Init()
     {
-        Logger::Info("Initializing Ethernet with DHCP");
-
         WiFi.onEvent(WiFiEvent);
 
         // For Olimex ESP32-POE-ISO, PHY is LAN8720A
@@ -67,40 +65,68 @@ namespace EthernetConnection
         //       The PHY is always powered when PoE is connected - no GPIO control needed.
         ETH.begin(0, -1, 23, 18, ETH_PHY_LAN8720, ETH_CLOCK_GPIO17_OUT);
 
-        // Wait for DHCP to assign an IP (with timeout)
-        uint32_t startTime = millis();
-        const uint32_t dhcpTimeout = 10000; // 10 seconds timeout for DHCP
-        
-        while (!gEthernetConnected && (millis() - startTime < dhcpTimeout))
+        if (!Settings::Instance()->IsEthernetDhcpEnabled)
         {
-            delay(100);
-        }
+            // Use static IP configuration
+            Logger::Info("Configuring Ethernet with static IP: %s", Settings::Instance()->EthernetStaticIp.c_str());
+            
+            IPAddress localIP, gateway, subnet, dns;
+            localIP.fromString(Settings::Instance()->EthernetStaticIp);
+            gateway.fromString(Settings::Instance()->EthernetGateway);
+            subnet.fromString(Settings::Instance()->EthernetSubnet);
+            dns.fromString(Settings::Instance()->EthernetDns);
 
-        // If DHCP failed, configure APIPA address (169.254.x.x)
-        if (!gEthernetConnected)
-        {
-            Logger::Warning("DHCP failed, using APIPA address");
-            gDhcpFailed = true;
-            
-            // Generate APIPA address in range 169.254.1.0 - 169.254.254.255
-            // Use last two octets of MAC address for uniqueness
-            uint8_t mac[6];
-            ETH.macAddress(mac);
-            IPAddress apipaIP(169, 254, mac[4], mac[5]);
-            IPAddress gateway(169, 254, 0, 1);
-            IPAddress subnet(255, 255, 0, 0);
-            
-            Logger::Info("Configuring APIPA IP: %s", apipaIP.toString().c_str());
-            
-            if (ETH.config(apipaIP, gateway, subnet))
+            if (ETH.config(localIP, gateway, subnet, dns))
             {
                 gEthernetConnected = true;
-                Logger::Info("APIPA configuration successful");
+                Logger::Info("Static IP configuration successful");
                 Logger::Info("ETH IPv4: %s", ETH.localIP().toString().c_str());
             }
             else
             {
-                Logger::Error("Failed to configure APIPA address");
+                Logger::Error("Failed to configure static IP");
+            }
+        }
+        else
+        {
+            // Use DHCP
+            Logger::Info("Initializing Ethernet with DHCP");
+            
+            // Wait for DHCP to assign an IP (with timeout)
+            uint32_t startTime = millis();
+            const uint32_t dhcpTimeout = 10000; // 10 seconds timeout for DHCP
+            
+            while (!gEthernetConnected && (millis() - startTime < dhcpTimeout))
+            {
+                delay(100);
+            }
+
+            // If DHCP failed, configure APIPA address (169.254.x.x)
+            if (!gEthernetConnected)
+            {
+                Logger::Warning("DHCP failed, using APIPA address");
+                gDhcpFailed = true;
+                
+                // Generate APIPA address in range 169.254.1.0 - 169.254.254.255
+                // Use last two octets of MAC address for uniqueness
+                uint8_t mac[6];
+                ETH.macAddress(mac);
+                IPAddress apipaIP(169, 254, mac[4], mac[5]);
+                IPAddress gateway(169, 254, 0, 1);
+                IPAddress subnet(255, 255, 0, 0);
+                
+                Logger::Info("Configuring APIPA IP: %s", apipaIP.toString().c_str());
+                
+                if (ETH.config(apipaIP, gateway, subnet))
+                {
+                    gEthernetConnected = true;
+                    Logger::Info("APIPA configuration successful");
+                    Logger::Info("ETH IPv4: %s", ETH.localIP().toString().c_str());
+                }
+                else
+                {
+                    Logger::Error("Failed to configure APIPA address");
+                }
             }
         }
     }
