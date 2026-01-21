@@ -20,7 +20,7 @@ constexpr uint8_t PinRTS = GPIO_NUM_13;
 
 // Constructor
 BoardOlimex::BoardOlimex()
-    : Board(PinRX, PinTX, PinRTS, true)  // Has Ethernet support
+    : Board(PinRX, PinTX, PinRTS, true, true)  // Has WiFi and Ethernet
 {
   // Nothing to do
 }

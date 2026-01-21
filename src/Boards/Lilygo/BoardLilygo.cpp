@@ -28,7 +28,7 @@ constexpr uint8_t Pin_WS2812 = 4;
 
 // Constructor
 BoardLilygo::BoardLilygo()
-    : Board(PinRX, PinTX, PinRTS, false)  // No Ethernet support
+    : Board(PinRX, PinTX, PinRTS, true, false)  // Has WiFi, no Ethernet
 {
   // Nothing to do
 }
