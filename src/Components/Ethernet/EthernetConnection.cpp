@@ -10,7 +10,7 @@ namespace EthernetConnection
     bool gEthernetConnected = false;
     bool gDhcpFailed = false;
 
-    void WiFiEvent(WiFiEvent_t event)
+    void EthernetEventHandler(WiFiEvent_t event)
     {
         switch (event)
         {
@@ -49,7 +49,9 @@ namespace EthernetConnection
     // Initializes ethernet with DHCP or static IP
     void Init()
     {
-        WiFi.onEvent(WiFiEvent);
+        // Register Ethernet event handler
+        // Note: WiFi.onEvent() is used for both WiFi and Ethernet events in ESP32
+        WiFi.onEvent(EthernetEventHandler);
 
         // For Olimex ESP32-POE-ISO, PHY is LAN8720A
         // ETH.begin(PHY_ADDR, PHY_POWER, PHY_MDC, PHY_MDIO, PHY_TYPE, CLK_MODE)
