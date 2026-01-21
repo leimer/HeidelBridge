@@ -2,8 +2,8 @@
 #include "Board.h"
 
 // Constructor
-Board::Board(uint8_t pinRx, uint8_t pinTx, uint8_t pinRts)
-    : mPinRx(pinRx), mPinTx(pinTx), mPinRts(pinRts)
+Board::Board(uint8_t pinRx, uint8_t pinTx, uint8_t pinRts, bool hasEthernet)
+    : mPinRx(pinRx), mPinTx(pinTx), mPinRts(pinRts), mHasEthernet(hasEthernet)
 {
 }
 
@@ -23,4 +23,10 @@ uint8_t Board::GetPinTx()
 uint8_t Board::GetPinRts()
 {
   return mPinRts;
+}
+
+// Returns true if this board has Ethernet support
+bool Board::HasEthernet()
+{
+  return mHasEthernet;
 }

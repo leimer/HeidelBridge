@@ -4,7 +4,7 @@ class Board
 {
 protected:
   // Constructor
-  Board(uint8_t pinRx, uint8_t pinTx, uint8_t pinRts);
+  Board(uint8_t pinRx, uint8_t pinTx, uint8_t pinRts, bool hasEthernet = false);
 
 public:
   // Initializes the board
@@ -17,7 +17,11 @@ public:
   uint8_t GetPinRx();
   uint8_t GetPinTx();
   uint8_t GetPinRts();
+  
+  // Returns true if this board has Ethernet support
+  bool HasEthernet();
 
 private:
   uint8_t mPinRx, mPinTx, mPinRts;
+  bool mHasEthernet;
 };

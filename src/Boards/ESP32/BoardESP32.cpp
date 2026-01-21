@@ -13,7 +13,7 @@ constexpr uint8_t PinRTS = GPIO_NUM_21;
 
 // Constructor
 BoardESP32::BoardESP32()
-    : Board(PinRX, PinTX, PinRTS)
+    : Board(PinRX, PinTX, PinRTS, false)  // No Ethernet support
 {
   // Nothing to do
 }
