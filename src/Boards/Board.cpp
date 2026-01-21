@@ -2,8 +2,8 @@
 #include "Board.h"
 
 // Constructor
-Board::Board(uint8_t pinRx, uint8_t pinTx, uint8_t pinRts, bool hasWiFi, bool hasEthernet)
-    : mPinRx(pinRx), mPinTx(pinTx), mPinRts(pinRts), mHasWiFi(hasWiFi), mHasEthernet(hasEthernet)
+Board::Board(uint8_t pinRx, uint8_t pinTx, uint8_t pinRts)
+    : mPinRx(pinRx), mPinTx(pinTx), mPinRts(pinRts)
 {
 }
 
@@ -23,15 +23,4 @@ uint8_t Board::GetPinTx()
 uint8_t Board::GetPinRts()
 {
   return mPinRts;
-}
-
-// Network capability interfaces
-bool Board::HasWiFi()
-{
-  return mHasWiFi;
-}
-
-bool Board::HasEthernet()
-{
-  return mHasEthernet;
 }

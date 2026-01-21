@@ -4,7 +4,7 @@ class Board
 {
 protected:
   // Constructor
-  Board(uint8_t pinRx, uint8_t pinTx, uint8_t pinRts, bool hasWiFi = true, bool hasEthernet = false);
+  Board(uint8_t pinRx, uint8_t pinTx, uint8_t pinRts);
 
 public:
   // Initializes the board
@@ -18,12 +18,10 @@ public:
   uint8_t GetPinTx();
   uint8_t GetPinRts();
   
-  // Network capability interfaces
-  bool HasWiFi();
-  bool HasEthernet();
+  // Network capability interfaces - to be implemented by each board
+  virtual bool HasWiFi() = 0;
+  virtual bool HasEthernet() = 0;
 
 private:
   uint8_t mPinRx, mPinTx, mPinRts;
-  bool mHasWiFi;
-  bool mHasEthernet;
 };
