@@ -29,3 +29,14 @@ void BoardESP32::Print()
 {
   Logger::Print("ESP32");
 }
+
+// Network capability interfaces
+bool BoardESP32::HasWiFi()
+{
+  return true;
+}
+
+bool BoardESP32::HasEthernet()
+{
+  return false;
+}

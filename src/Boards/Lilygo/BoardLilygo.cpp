@@ -51,3 +51,14 @@ void BoardLilygo::Print()
 {
   Logger::Print("LILYGO T-CAN485");
 }
+
+// Network capability interfaces
+bool BoardLilygo::HasWiFi()
+{
+  return true;
+}
+
+bool BoardLilygo::HasEthernet()
+{
+  return false;
+}

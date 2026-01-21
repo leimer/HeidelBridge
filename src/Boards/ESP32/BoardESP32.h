@@ -11,4 +11,8 @@ public:
 
   // Logs board name/information
   virtual void Print();
+  
+  // Network capability interfaces
+  virtual bool HasWiFi();
+  virtual bool HasEthernet();
 };
