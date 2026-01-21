@@ -28,11 +28,6 @@ public:
     String DeviceName{};
     String WifiSsid{};
     String WifiPassword{};
-    bool IsEthernetDhcpEnabled{true};
-    String EthernetIpAddress{"192.168.1.250"};
-    String EthernetGateway{"192.168.1.1"};
-    String EthernetSubnet{"255.255.255.0"};
-    String EthernetDns{"8.8.8.8"};
     bool IsMqttEnabled{false};
     String MqttServer{};
     uint16_t MqttPort{1883};
