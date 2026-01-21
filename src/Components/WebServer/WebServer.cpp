@@ -7,7 +7,7 @@
 #include "../../Configuration/Constants.h"
 #include "../../Configuration/Settings.h"
 #include "../../Configuration/Version.h"
-#include "NetworkScanner.h"
+#include "../WiFi/NetworkScanner.h"
 #include "../../Utils/StaticFile.h"
 #include "../Logger/Logger.h"
 #include "WebServer.h"

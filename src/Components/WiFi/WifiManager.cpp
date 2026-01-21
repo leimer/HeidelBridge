@@ -4,9 +4,9 @@
 #include "../../Configuration/Settings.h"
 #include "../Logger/Logger.h"
 #include "WifiConnection.h"
-#include "EthernetConnection.h"
+#include "../Ethernet/EthernetConnection.h"
 #include "CaptivePortal.h"
-#include "WebServer.h"
+#include "../WebServer/WebServer.h"
 #include "WifiManager.h"
 
 WifiManager *WifiManager::Instance()

@@ -4,7 +4,7 @@
 #include "../../Configuration/Constants.h"
 #include "../../Configuration/Settings.h"
 #include "CaptivePortal.h"
-#include "EthernetConnection.h"
+#include "../Ethernet/EthernetConnection.h"
 #include "../Logger/Logger.h"
 
 namespace CaptivePortal
