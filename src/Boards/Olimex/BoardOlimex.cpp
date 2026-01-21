@@ -9,6 +9,9 @@
 // UEXT Pin 6 (SDA) -> GPIO 13 -> MOD-RS485 DE+RE (Direction Control)
 //
 // Note: GPIO 36 is input-only on ESP32, which is perfect for RX
+//       GPIO 36 has a 2.2k pull-up on ESP32-POE-ISO board
+//       This is not an issue: RS485 RO can easily drive 1.5mA (~3.3V/2.2k)
+//       The pull-up provides a defined idle state (high) which is beneficial
 // GPIO 4 is used for TX (output)
 // GPIO 13 is used for DE/RE control (output)
 constexpr uint8_t PinRX = GPIO_NUM_36;
