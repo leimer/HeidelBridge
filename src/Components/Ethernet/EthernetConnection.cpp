@@ -63,12 +63,13 @@ namespace EthernetConnection
         // PHY_MDC = 23
         // PHY_MDIO = 18
         // PHY_TYPE = ETH_PHY_LAN8720
-        // CLK_MODE = ETH_CLOCK_GPIO17_OUT
+        // CLK_MODE = ETH_CLOCK_GPIO0_IN (50MHz clock input from PHY on GPIO0)
         //
         // Note: PoE power is managed by Si3402-B chip on the board.
         //       The PHY is always powered when PoE is connected - no GPIO control needed.
+        //       The ESP32-POE-ISO uses external 50MHz oscillator with clock input on GPIO0.
         Logger::Debug("Starting ETH PHY (LAN8720A)...");
-        ETH.begin(0, -1, 23, 18, ETH_PHY_LAN8720, ETH_CLOCK_GPIO17_OUT);
+        ETH.begin(0, -1, 23, 18, ETH_PHY_LAN8720, ETH_CLOCK_GPIO0_IN);
 
         // Wait for link to come up
         Logger::Debug("Waiting for Ethernet link...");
