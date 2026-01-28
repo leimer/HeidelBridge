@@ -54,11 +54,11 @@ Then follow these steps:
 
 - Start by cloning or downloading this repository.
 - Optional: change `board = ...` in platformio.ini to match the ESP32 board you are actually using.
-- Compile the project.
-- Build the file system image via the PlatformIO command palette.
+- Compile the project with `platformio run -e <environment>` (see build environments below).
 - Now connect your ESP32 via USB.
-- Upload the file system image.
-- Upload the firmware.
+- Upload the firmware with `platformio run -e <environment> -t upload`.
+
+**Note:** You do NOT need to run `build-resources.sh` for normal builds. This script is only required when modifying web interface files. See [Build Process Documentation](BuildProcess.md) for details.
 
 ## Build Environments
 

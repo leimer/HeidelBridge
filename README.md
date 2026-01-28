@@ -78,6 +78,21 @@ The following web endpoints are currently served by HeidelBridge:
 
 :heart: Help is welcome! Do you own a Heidelberg Energy Control wallbox? Are you a Modbus expert? Do you have ideas for improvements? Did you find a bug? Feel free to review the code, create pull requests, open issues or contact me directly.
 
+## For Developers
+
+### Building the Firmware
+
+Simply run:
+```bash
+platformio run -e olimex    # For ESP32-POE-ISO
+platformio run -e esp32     # For standard ESP32
+platformio run -e lilygo    # For LILYGO T-CAN485
+```
+
+The `build-resources.sh` script is **only needed when modifying web interface files** (HTML, CSS, JS) in the `data/` directory. For normal builds, the generated header files are already included in the repository.
+
+For detailed build process documentation, see [docs/BuildProcess.md](docs/BuildProcess.md).
+
 
 # Used Assets and Libraries
 
