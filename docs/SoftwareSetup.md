@@ -38,11 +38,13 @@ If you want to change the configuration of your HeidelBridge, you can open the w
 
 To update the firmware on your HeidelBridge, download the latest firmware binary from the [GitHub releases](https://github.com/BorisBrock/HeidelBridge/releases).
 
-Now open the update web interface of your heidelbridge in a web browser: `{ip}/update` (where {ip} is the IP address of your HeidelBridge).
+Now open the update web interface of your HeidelBridge in a web browser: `{ip}/update` (where {ip} is the IP address of your HeidelBridge).
 
 Here you can upload the firmware binary and start the update.
 
 ![OTA](/docs/img/Screenshot_OTA.png)
+
+**Note for ESP32-POE-ISO users:** OTA updates work over both WiFi and Ethernet connections. For detailed information about updating via Ethernet, see [OTA Updates over Ethernet](OTA-Ethernet.md).
 
 ## Programming Your ESP32 Manually
 
