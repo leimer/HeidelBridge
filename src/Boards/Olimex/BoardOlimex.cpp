@@ -3,6 +3,11 @@
 #include "../Board.h"
 #include "BoardOlimex.h"
 
+// Hardware: Olimex ESP32-POE-ISO board
+// Processor: ESP32-WROOM-32E module (ESP32-D0WDQ6 chip, dual-core, 4MB flash)
+// Ethernet PHY: LAN8720A
+// PoE Controller: Si3402-B (IEEE 802.3af/at compliant)
+//
 // Pin connections for Olimex ESP32-POE-ISO with MOD-RS485 via UEXT connector:
 // UEXT Pin 3 (TXD) -> GPIO 4 -> MOD-RS485 DI (Driver Input)
 // UEXT Pin 4 (RXD) -> GPIO 36 -> MOD-RS485 RO (Receiver Output)
