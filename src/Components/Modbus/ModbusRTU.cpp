@@ -12,6 +12,52 @@ ModbusClientRTU gModbusRTU(BoardFactory::Instance()->GetBoard()->GetPinRts()); /
 HardwareSerial gRs485Serial(1);                                                // Define a Serial for UART1
 SemaphoreHandle_t gMutex = nullptr;                                            // A mutex object for buss access
 
+// Helper function to format Modbus message as hex string
+String FormatModbusMessageHex(ModbusMessage &msg)
+{
+    String hexStr = "";
+    uint16_t len = msg.size();
+    
+    if (len == 0)
+    {
+        return "[EMPTY - NO RESPONSE/TIMEOUT]";
+    }
+    
+    const uint8_t *data = msg.data();
+    for (uint16_t i = 0; i < len; i++)
+    {
+        if (i > 0) hexStr += " ";
+        char buf[3];
+        sprintf(buf, "%02X", data[i]);
+        hexStr += buf;
+    }
+    return hexStr;
+}
+
+// Helper function to explain Modbus error codes
+const char* GetModbusErrorDescription(uint8_t errorCode)
+{
+    switch (errorCode)
+    {
+        case 0x00: return "SUCCESS - No error";
+        case 0x01: return "ILLEGAL FUNCTION - Function code not supported by wallbox";
+        case 0x02: return "ILLEGAL DATA ADDRESS - Register address invalid";
+        case 0x03: return "ILLEGAL DATA VALUE - Value out of range";
+        case 0x04: return "SLAVE DEVICE FAILURE - Wallbox internal error";
+        case 0x05: return "ACKNOWLEDGE - Wallbox needs more time (rare)";
+        case 0x06: return "SLAVE DEVICE BUSY - Wallbox busy, retry later";
+        case 0x07: return "NEGATIVE ACKNOWLEDGE - Wallbox cannot process";
+        case 0x08: return "MEMORY PARITY ERROR - Wallbox memory fault";
+        case 0xE0: return "TIMEOUT - No response from wallbox (check wiring/config)";
+        case 0xE1: return "INVALID SERVER - Wrong server ID configured";
+        case 0xE2: return "CRC ERROR - Communication error (noise/wiring issue)";
+        case 0xE3: return "FC MISMATCH - Response doesn't match request";
+        case 0xE4: return "SERVER ID MISMATCH - Wrong server responded";
+        case 0xE5: return "PACKET LENGTH ERROR - Truncated response";
+        default: return "UNKNOWN ERROR - Check eModbus documentation";
+    }
+}
+
 // Returns the singleton instance of ModbusRTU
 ModbusRTU *ModbusRTU::Instance()
 {
@@ -31,14 +77,27 @@ void ModbusRTU::Init()
     uint8_t pinRts = BoardFactory::Instance()->GetBoard()->GetPinRts();
 
     // Init serial conneted to the RTU Modbus
-    Logger::Info("Starting RS485 hardware serial");
-    Logger::Info("  TX Pin (DI): GPIO %d", pinTx);
-    Logger::Info("  RX Pin (RO): GPIO %d", pinRx);
-    Logger::Info("  RTS Pin (DE/RE): GPIO %d", pinRts);
-    Logger::Info("  Baud Rate: %d", Constants::HeidelbergWallbox::ModbusBaudrate);
-    Logger::Info("  Mode: SERIAL_8E1 (8 bits, Even parity, 1 stop bit)");
-    Logger::Info("  Modbus Server ID: %d", Constants::HeidelbergWallbox::ModbusServerId);
-    Logger::Info("  Timeout: %d ms", Constants::HeidelbergWallbox::ModbusTimeoutMs);
+    Logger::Info("========================================");
+    Logger::Info("RS485 ModbusRTU Initialization");
+    Logger::Info("========================================");
+    Logger::Info("Hardware Configuration:");
+    Logger::Info("  TX Pin (DI):  GPIO %d → MOD-RS485 Driver Input", pinTx);
+    Logger::Info("  RX Pin (RO):  GPIO %d → MOD-RS485 Receiver Output", pinRx);
+    Logger::Info("  RTS Pin (DE): GPIO %d → MOD-RS485 Direction Control", pinRts);
+    Logger::Info("");
+    Logger::Info("Serial Configuration:");
+    Logger::Info("  Baud Rate: %d bps", Constants::HeidelbergWallbox::ModbusBaudrate);
+    Logger::Info("  Data Bits: 8");
+    Logger::Info("  Parity:    Even");
+    Logger::Info("  Stop Bits: 1");
+    Logger::Info("  Mode:      SERIAL_8E1");
+    Logger::Info("");
+    Logger::Info("Modbus Configuration:");
+    Logger::Info("  Server ID: %d (wallbox slave address)", Constants::HeidelbergWallbox::ModbusServerId);
+    Logger::Info("  Timeout:   %d ms", Constants::HeidelbergWallbox::ModbusTimeoutMs);
+    Logger::Info("  Retries:   %d (write), %d (read)", 
+                 Constants::ModbusRTU::NumWriteRetries, Constants::ModbusRTU::NumReadRetries);
+    Logger::Info("========================================");
     
     RTUutils::prepareHardwareSerial(gRs485Serial);
     gRs485Serial.begin(
@@ -52,6 +111,7 @@ void ModbusRTU::Init()
     gModbusRTU.setTimeout(Constants::HeidelbergWallbox::ModbusTimeoutMs);
     gModbusRTU.begin(gRs485Serial); // Start ModbusRTU background task
     Logger::Info("ModbusRTU client started successfully");
+    Logger::Info("========================================");
 }
 
 // Reads multiple registers starting from the specified address
@@ -146,19 +206,30 @@ bool ModbusRTU::WriteHoldRegister16(uint16_t address, uint16_t value)
     uint8_t lastError = 0;
     uint8_t attemptNumber = 0;
 
-    Logger::Debug("ModbusRTU write: Server=%d, Addr=%d, Value=%d (0x%04X)", 
-                  Constants::HeidelbergWallbox::ModbusServerId, address, value, value);
+    Logger::Info("┌─────────────────────────────────────────────");
+    Logger::Info("│ ModbusRTU WRITE Request");
+    Logger::Info("├─────────────────────────────────────────────");
+    Logger::Info("│ Server ID:   %d", Constants::HeidelbergWallbox::ModbusServerId);
+    Logger::Info("│ Function:    0x06 (Write Single Register)");
+    Logger::Info("│ Address:     %d (0x%04X)", address, address);
+    Logger::Info("│ Value:       %d (0x%04X)", value, value);
+    Logger::Info("│ GPIO Usage:  TX=%d RX=%d RTS=%d", 
+                 BoardFactory::Instance()->GetBoard()->GetPinTx(),
+                 BoardFactory::Instance()->GetBoard()->GetPinRx(),
+                 BoardFactory::Instance()->GetBoard()->GetPinRts());
+    Logger::Info("└─────────────────────────────────────────────");
 
     while (numTries > 0)
     {
         attemptNumber++;
         
+        Logger::Info(">>> Attempt %d/%d: Sending request...", 
+                     attemptNumber, 1 + Constants::ModbusRTU::NumWriteRetries);
+        
         // Try to get the mutex
         if (xSemaphoreTake(gMutex, portMAX_DELAY))
         {
-            Logger::Trace("ModbusRTU write attempt %d/%d: Sending request...", 
-                         attemptNumber, 1 + Constants::ModbusRTU::NumWriteRetries);
-                         
+            // Build the request (note: this creates the request but we need to intercept it)
             ModbusMessage response = gModbusRTU.syncRequest(
                 0,
                 Constants::HeidelbergWallbox::ModbusServerId,
@@ -169,36 +240,62 @@ bool ModbusRTU::WriteHoldRegister16(uint16_t address, uint16_t value)
             // Free mutex
             xSemaphoreGive(gMutex);
 
+            // Log the request frame (reconstructed for display)
+            Logger::Info(">>> TX BYTES: 01 06 %02X %02X %02X %02X [+CRC]", 
+                        (address >> 8) & 0xFF, address & 0xFF,
+                        (value >> 8) & 0xFF, value & 0xFF);
+            Logger::Info("    Frame: [ServerID=0x01][FC=0x06][Addr][Value][CRC]");
+
             lastError = response.getError();
+            
+            // Log the response
+            String responseHex = FormatModbusMessageHex(response);
+            Logger::Info("<<< RX BYTES: %s", responseHex.c_str());
             
             if (lastError == SUCCESS)
             {
-                Logger::Debug("ModbusRTU write successful on attempt %d", attemptNumber);
+                Logger::Info("<<< Response: SUCCESS");
+                Logger::Info("└─────────────────────────────────────────────");
+                Logger::Info("✓ Write completed successfully on attempt %d", attemptNumber);
+                Logger::Info("");
                 return true;
             }
             else
             {
                 // Write failed - log detailed error info
+                Logger::Error("<<< Response: ERROR %d (0x%02X)", lastError, lastError);
+                Logger::Error("<<< Meaning: %s", GetModbusErrorDescription(lastError));
+                Logger::Error("└─────────────────────────────────────────────");
+                
                 if (lastError == 0xE0 || lastError == 224)
                 {
-                    Logger::Warning("ModbusRTU write attempt %d/%d: TIMEOUT (error 224/0xE0)", 
-                                  attemptNumber, 1 + Constants::ModbusRTU::NumWriteRetries);
-                    Logger::Warning("  → No response from wallbox (check wiring, baud rate, slave ID)");
+                    Logger::Error("✗ TIMEOUT - No response received from wallbox");
+                    Logger::Error("  Possible causes:");
+                    Logger::Error("  • RS485 wiring incorrect (check A/B/GND)");
+                    Logger::Error("  • Wallbox not powered or not ready");
+                    Logger::Error("  • Wrong baud rate (wallbox ≠ %d)", Constants::HeidelbergWallbox::ModbusBaudrate);
+                    Logger::Error("  • Wrong server ID (wallbox ≠ %d)", Constants::HeidelbergWallbox::ModbusServerId);
+                    Logger::Error("  • A/B polarity reversed");
+                    Logger::Error("  • MOD-RS485 not seated properly in UEXT");
+                    Logger::Error("  • Cable too long or poor quality");
                 }
                 else if (lastError >= 0x01 && lastError <= 0x08)
                 {
-                    Logger::Warning("ModbusRTU write attempt %d/%d: MODBUS EXCEPTION %d", 
-                                  attemptNumber, 1 + Constants::ModbusRTU::NumWriteRetries, lastError);
+                    Logger::Error("✗ MODBUS EXCEPTION - Wallbox rejected the request");
+                    Logger::Error("  The wallbox received the request but cannot fulfill it");
                 }
-                else
+                else if (lastError == 0xE2)
                 {
-                    Logger::Warning("ModbusRTU write attempt %d/%d: ERROR CODE %d (0x%02X)", 
-                                  attemptNumber, 1 + Constants::ModbusRTU::NumWriteRetries, lastError, lastError);
+                    Logger::Error("✗ CRC ERROR - Communication corruption detected");
+                    Logger::Error("  • Check for electrical noise on RS485 line");
+                    Logger::Error("  • Verify proper cable shielding");
+                    Logger::Error("  • Check termination resistors");
                 }
                 
                 if (numTries > 1)
                 {
-                    Logger::Trace("  Retrying in %d ms...", Constants::ModbusRTU::RetryDelayMs);
+                    Logger::Warning("  ⟳ Retrying in %d ms...", Constants::ModbusRTU::RetryDelayMs);
+                    Logger::Info("");
                     delay(Constants::ModbusRTU::RetryDelayMs);
                 }
             }
@@ -207,20 +304,15 @@ bool ModbusRTU::WriteHoldRegister16(uint16_t address, uint16_t value)
         numTries--;
     }
 
-    // All write attempts failed - provide diagnostic information
-    Logger::Error("ModbusRTU write FAILED after %d attempts: Error %d (0x%02X)", 
+    // All write attempts failed
+    Logger::Error("═══════════════════════════════════════════════");
+    Logger::Error("✗ ModbusRTU WRITE FAILED");
+    Logger::Error("═══════════════════════════════════════════════");
+    Logger::Error("After %d attempts, all failed with error %d (0x%02X)", 
                   attemptNumber, lastError, lastError);
-    
-    if (lastError == 0xE0 || lastError == 224)
-    {
-        Logger::Error("TIMEOUT ERROR - Wallbox not responding. Check:");
-        Logger::Error("  1. RS485 wiring: A→A, B→B, GND→GND");
-        Logger::Error("  2. Wallbox is powered on and ready");
-        Logger::Error("  3. Baud rate matches wallbox (%d)", Constants::HeidelbergWallbox::ModbusBaudrate);
-        Logger::Error("  4. Slave ID matches wallbox (%d)", Constants::HeidelbergWallbox::ModbusServerId);
-        Logger::Error("  5. Try swapping A/B wires if polarity unclear");
-        Logger::Error("  6. Check MOD-RS485 is firmly seated in UEXT connector");
-    }
+    Logger::Error("Error: %s", GetModbusErrorDescription(lastError));
+    Logger::Error("═══════════════════════════════════════════════");
+    Logger::Error("");
     
     gStatistics.NumModbusWriteErrors++;
     return false;
