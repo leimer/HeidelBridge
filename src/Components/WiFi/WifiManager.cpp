@@ -24,25 +24,26 @@ void WifiManager::Start()
     // Try Ethernet first if the board supports it
     if (BoardFactory::Instance()->GetBoard()->HasEthernet())
     {
+        Logger::Debug("Board supports Ethernet, attempting connection...");
         EthernetConnection::Init();
         
-        // Wait a bit for ethernet to connect
+        // Wait for ethernet to connect (increased timeout for link + IP)
         uint32_t startTimeMs = millis();
-        while (!EthernetConnection::IsConnected() && (millis() - startTimeMs < 5000))
+        while (!EthernetConnection::IsConnected() && (millis() - startTimeMs < 15000))
         {
             delay(100);
         }
         
         if (EthernetConnection::IsConnected())
         {
-            Logger::Info("Ethernet connection established");
+            Logger::Info("Ethernet connection established at %s", EthernetConnection::GetLocalIP().c_str());
             // Start the web server without captive portal
             WebServer::Instance()->Init();
             return;
         }
         else
         {
-            Logger::Warning("Ethernet connection failed, falling back to WiFi");
+            Logger::Warning("Ethernet connection failed after 15 seconds, falling back to WiFi");
         }
     }
 

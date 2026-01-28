@@ -49,6 +49,8 @@ namespace EthernetConnection
     // Initializes ethernet with DHCP or static IP
     void Init()
     {
+        Logger::Info("Initializing Ethernet...");
+        
         // Register Ethernet event handler
         // Note: WiFi.onEvent() is used for both WiFi and Ethernet events in ESP32
         WiFi.onEvent(EthernetEventHandler);
@@ -65,12 +67,34 @@ namespace EthernetConnection
         //
         // Note: PoE power is managed by Si3402-B chip on the board.
         //       The PHY is always powered when PoE is connected - no GPIO control needed.
+        Logger::Debug("Starting ETH PHY (LAN8720A)...");
         ETH.begin(0, -1, 23, 18, ETH_PHY_LAN8720, ETH_CLOCK_GPIO17_OUT);
+
+        // Wait for link to come up
+        Logger::Debug("Waiting for Ethernet link...");
+        uint32_t linkWaitStart = millis();
+        const uint32_t linkTimeout = 5000; // 5 seconds for link
+        while (!ETH.linkUp() && (millis() - linkWaitStart < linkTimeout))
+        {
+            delay(100);
+        }
+
+        if (!ETH.linkUp())
+        {
+            Logger::Warning("Ethernet link not established (check cable connection)");
+            return;
+        }
+        
+        Logger::Info("Ethernet link UP");
 
         if (!Settings::Instance()->IsEthernetDhcpEnabled)
         {
             // Use static IP configuration
             Logger::Info("Configuring Ethernet with static IP: %s", Settings::Instance()->EthernetStaticIp.c_str());
+            Logger::Info("Gateway: %s, Subnet: %s, DNS: %s", 
+                Settings::Instance()->EthernetGateway.c_str(),
+                Settings::Instance()->EthernetSubnet.c_str(),
+                Settings::Instance()->EthernetDns.c_str());
             
             IPAddress localIP, gateway, subnet, dns;
             localIP.fromString(Settings::Instance()->EthernetStaticIp);
@@ -83,6 +107,8 @@ namespace EthernetConnection
                 gEthernetConnected = true;
                 Logger::Info("Static IP configuration successful");
                 Logger::Info("ETH IPv4: %s", ETH.localIP().toString().c_str());
+                Logger::Info("ETH Gateway: %s", ETH.gatewayIP().toString().c_str());
+                Logger::Info("ETH Subnet: %s", ETH.subnetMask().toString().c_str());
             }
             else
             {
