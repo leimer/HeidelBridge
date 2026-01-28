@@ -1,6 +1,19 @@
 # MOD-RS485 Configuration Guide
 
-Complete configuration guide for the Olimex MOD-RS485 module when used with ESP32-POE-ISO via the UEXT connector.
+Complete configuration guide for the Olimex MOD-RS485 module when used with **ESP32-POE-ISO** via the UEXT connector.
+
+> **⚠️ CRITICAL: Board Variant Differences**
+>
+> This guide is specifically for **ESP32-POE-ISO** (isolated version with WROOM-32E). 
+>
+> **GPIO pin mappings differ from ESP32-POE (non-ISO variant):**
+>
+> | UEXT Pin | ESP32-POE-ISO | ESP32-POE (non-ISO) |
+> |----------|---------------|---------------------|
+> | Pin 9 (SCK) | **GPIO 14** ✓ | GPIO 2 |
+> | Pin 10 (#SS) | **GPIO 15** ✓ | GPIO 5 |
+>
+> **Always verify your board model!** Using wrong pins will cause communication failures (Error 224).
 
 ---
 
@@ -63,6 +76,8 @@ The UEXT connector is a 10-pin universal extension interface standard.
 
 ### ESP32-POE-ISO UEXT Pin Mapping
 
+**For ESP32-POE-ISO (WROOM-32E module):**
+
 | UEXT Pin | Signal | ESP32 GPIO | HeidelBridge Usage |
 |----------|--------|------------|---------------------|
 | 1 | VCC | - | Powers MOD-RS485 (3.3V) |
@@ -75,6 +90,8 @@ The UEXT connector is a 10-pin universal extension interface standard.
 | 8 | - | - | Not Connected |
 | 9 | SCK | **GPIO 14** | **Used for RTS (Direction Control)** ✓ |
 | 10 | #SS | GPIO 15 | Available (SPI, also SD card) |
+
+> **Note:** ESP32-POE (non-ISO) uses different GPIO pins: SCK=GPIO 2, #SS=GPIO 5. Always verify your board variant!
 
 ### MOD-RS485 Internal Connections
 

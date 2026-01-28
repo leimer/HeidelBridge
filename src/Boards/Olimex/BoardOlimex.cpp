@@ -55,6 +55,7 @@
 //   Using a pin on one connector means it's unavailable on the other!
 //
 // ============================================================================
+// ============================================================================
 // CURRENT PIN CONFIGURATION: MOD-RS485 via UEXT
 // ============================================================================
 //
@@ -62,6 +63,18 @@
 //   UEXT Pin 3 (TXD) -> GPIO 4  -> MOD-RS485 DI (Driver Input)
 //   UEXT Pin 4 (RXD) -> GPIO 36 -> MOD-RS485 RO (Receiver Output)
 //   UEXT Pin 9 (SCK) -> GPIO 14 -> MOD-RS485 DE (Driver Enable)
+//
+// ⚠️ IMPORTANT: ESP32-POE vs ESP32-POE-ISO Pin Differences
+//
+// ESP32-POE-ISO (this board):
+//   UEXT Pin 9 (SCK): GPIO 14
+//   UEXT Pin 10 (#SS): GPIO 15
+//
+// ESP32-POE (non-ISO variant):
+//   UEXT Pin 9 (SCK): GPIO 2
+//   UEXT Pin 10 (#SS): GPIO 5
+//
+// Always verify your board model! Using wrong pins = communication failure.
 //
 // GPIO 36 Notes:
 //   - Input-only pin on ESP32 (perfect for RS485 RX)
