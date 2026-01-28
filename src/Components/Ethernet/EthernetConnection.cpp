@@ -56,21 +56,22 @@ namespace EthernetConnection
         WiFi.onEvent(EthernetEventHandler);
 
         // For Olimex ESP32-POE-ISO with ETH8720 chip (LAN8720 compatible)
-        // ETH.begin(PHY_ADDR, PHY_POWER, PHY_MDC, PHY_MDIO, PHY_TYPE, CLK_MODE)
-        // 
-        // Official pin configuration from ESP32-POE-ISO manual:
-        // PHY_ADDR = 0 (PHY address on MDIO bus)
-        // PHY_POWER/RESET = 12 (GPIO 12 is PHY reset pin)
-        // PHY_MDC = 23 (Management Data Clock)
-        // PHY_MDIO = 18 (Management Data I/O)
-        // PHY_TYPE = ETH_PHY_LAN8720 (ETH8720 is LAN8720 compatible)
-        // CLK_MODE = ETH_CLOCK_GPIO0_IN (50MHz clock input from external oscillator on GPIO0)
         //
-        // Note: PoE power is managed by Si3402-B chip. The PHY_POWER parameter (GPIO12)
-        //       is used for PHY RESET control, not power control. Proper reset sequence
-        //       during initialization ensures reliable PHY startup.
-        Logger::Debug("Starting ETH PHY (ETH8720/LAN8720A)...");
-        ETH.begin(0, 12, 23, 18, ETH_PHY_LAN8720, ETH_CLOCK_GPIO0_IN);
+        // Using ETH.begin() without parameters to use board-defined pin configuration.
+        // The esp32-poe-iso board definition in PlatformIO includes all required settings:
+        // - PHY_ADDR = 0 (PHY address on MDIO bus)
+        // - PHY_MDC = 23 (Management Data Clock)
+        // - PHY_MDIO = 18 (Management Data I/O)
+        // - PHY_TYPE = ETH_PHY_LAN8720 (ETH8720 is LAN8720 compatible)
+        // - CLK_MODE = ETH_CLOCK_GPIO0_IN (50MHz clock from external oscillator on GPIO0)
+        // - PHY_POWER = -1 (No GPIO control, reset handled internally)
+        //
+        // This matches the official Olimex Arduino example which uses ETH.begin() with no
+        // parameters. Avoids bootstrap pin conflicts and timing issues with manual config.
+        //
+        // Note: PoE power is managed by Si3402-B chip, independent of PHY initialization.
+        Logger::Debug("Starting ETH PHY with board-defined configuration...");
+        ETH.begin();
 
         // Wait for link to come up
         Logger::Debug("Waiting for Ethernet link...");
