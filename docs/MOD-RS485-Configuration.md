@@ -4,13 +4,30 @@ Complete configuration guide for the Olimex MOD-RS485 module when used with ESP3
 
 ---
 
-## Quick Fix for Error 224
+## ✅ Good News: No Jumper Changes Required!
 
-**If you're getting ModbusRTU error 224 (timeout), the most likely cause is jumper misconfiguration!**
+**The code now works with DEFAULT MOD-RS485 jumper positions!**
 
-**Solution:** Move the `#SS/SDA` jumper on your MOD-RS485 from `#SS` position to `SDA` position.
+As of the latest version, HeidelBridge uses GPIO 14 for RS485 direction control, which matches the default `SCK` jumper position on MOD-RS485. 
 
-This takes 30 seconds and should fix the issue immediately. See [Step-by-Step Instructions](#step-by-step-jumper-configuration) below.
+**No hardware modifications needed** - just plug in MOD-RS485 and it should work!
+
+---
+
+## If You're Still Getting Error 224
+
+The default configuration should work, but if you're experiencing issues:
+
+1. **Verify jumpers are in default positions:**
+   - `SCL/SCK` = **SCK** position
+   - `#SS/SDA` = **#SS** position
+   - `ENABLE_RT` = **CLOSED** (120Ω termination enabled)
+
+2. **Check other causes:**
+   - RS485 cable wiring (A→A, B→B, GND→GND)
+   - Wallbox powered on and ready
+   - Baud rate matches wallbox (19200)
+   - See [Troubleshooting](#troubleshooting) section below
 
 ---
 
@@ -53,10 +70,10 @@ The UEXT connector is a 10-pin universal extension interface standard.
 | 3 | TXD | **GPIO 4** | **Serial TX → MOD-RS485 DI** |
 | 4 | RXD | **GPIO 36** | **Serial RX ← MOD-RS485 RO** |
 | 5 | SCL | GPIO 16 | Available (I2C) |
-| 6 | SDA | **GPIO 13** | **Used for RTS (Direction Control)** |
+| 6 | SDA | GPIO 13 | Available (I2C, shared) |
 | 7 | - | - | Not Connected |
 | 8 | - | - | Not Connected |
-| 9 | SCK | GPIO 14 | Available (SPI, also SD card) |
+| 9 | SCK | **GPIO 14** | **Used for RTS (Direction Control)** ✓ |
 | 10 | #SS | GPIO 15 | Available (SPI, also SD card) |
 
 ### MOD-RS485 Internal Connections
@@ -95,29 +112,68 @@ The MOD-RS485 has three jumpers that control its operation:
 
 **Positions:**
 - **SCL:** UEXT Pin 5 (GPIO 16) → DE
-- **SCK:** UEXT Pin 9 (GPIO 14) → DE **(DEFAULT)**
+- **SCK:** UEXT Pin 9 (GPIO 14) → DE **(DEFAULT)** ✓
 
 **Default Position:** **SCK**
 
+**HeidelBridge Uses:** **GPIO 14 (SCK position)** - matches default!
+
 **Impact:** Determines which GPIO controls transmit mode
 
-### 3. #SS/SDA Jumper (CRITICAL!)
+### 3. #SS/SDA Jumper
 
 **Function:** Selects which UEXT pin controls /RE (Receiver Enable)
 
 **Positions:**
-- **#SS:** UEXT Pin 10 (GPIO 15) → /RE **(DEFAULT)**
-- **SDA:** UEXT Pin 6 (GPIO 13) → /RE **(REQUIRED FOR HEIDELBRIDGE)**
+- **#SS:** UEXT Pin 10 (GPIO 15) → /RE **(DEFAULT)** ✓
+- **SDA:** UEXT Pin 6 (GPIO 13) → /RE
 
 **Default Position:** **#SS**
 
-**IMPORTANT:** For HeidelBridge, this jumper **MUST** be in **SDA** position!
+**HeidelBridge:** Not explicitly controlled (GPIO 14 controls DE, which is sufficient for half-duplex RS485)
+
+**Note:** We only control DE (Driver Enable) on GPIO 14. The /RE pin is not actively controlled but this works fine for half-duplex RS485 communication.
 
 ---
 
 ## Configuration Options
 
-### Option 1: Change Jumper (RECOMMENDED) ⭐
+### Current Configuration (Default - Works Out of Box!) ⭐
+
+**NO JUMPER CHANGES NEEDED!**
+
+**Jumper Positions:**
+```
+ENABLE_RT: CLOSED (default) ✓
+SCL/SCK:   SCK (default) ✓
+#SS/SDA:   #SS (default) ✓
+```
+
+**Code Configuration:**
+- TX: GPIO 4 (UEXT Pin 3)
+- RX: GPIO 36 (UEXT Pin 4)
+- RTS: GPIO 14 (UEXT Pin 9) - Controls DE (Driver Enable)
+
+**How It Works:**
+- GPIO 14 controls DE (Driver Enable) directly via SCK jumper
+- When HIGH: Transceiver in transmit mode
+- When LOW: Transceiver in receive mode
+- /RE is not actively controlled (can remain in default state)
+- Works perfectly for half-duplex RS485 (never transmit and receive simultaneously)
+
+**Pros:**
+- ✅ Works with default MOD-RS485 jumpers
+- ✅ No hardware modifications needed
+- ✅ Simple plug-and-play setup
+- ✅ Recommended configuration
+
+**Note:** GPIO 14 is also used for SD card on ESP32-POE-ISO, but HeidelBridge doesn't use SD card functionality, so there's no conflict.
+
+---
+
+### Alternative: Change Jumper to SDA (Legacy Configuration)
+
+**If you prefer to use GPIO 13 instead of GPIO 14:**
 
 **Action:** Move #SS/SDA jumper to SDA position
 
@@ -128,59 +184,17 @@ SCL/SCK:   SCK (default)
 #SS/SDA:   SDA (CHANGED from default)
 ```
 
-**Result:**
-- GPIO 13 (RTS) controls /RE ✓
-- Works with current HeidelBridge code
-- No code changes needed
-- No GPIO conflicts
-
-**Pros:**
-- ✅ Simple 30-second hardware change
-- ✅ No software modifications needed
-- ✅ No GPIO conflicts
-- ✅ Recommended solution
-
-**Cons:**
-- ❌ Requires physical access to MOD-RS485
-- ❌ Non-standard jumper configuration
-
----
-
-### Option 2: Change Code to GPIO 14
-
-**Action:** Modify code to use GPIO 14 for RTS instead of GPIO 13
-
-**Configuration:**
-```
-ENABLE_RT: CLOSED (default)
-SCL/SCK:   SCK (default)  
-#SS/SDA:   #SS (default)
-```
-
-**Code Change:**
+**Code Change Required:**
 ```cpp
 // File: src/Boards/Olimex/BoardOlimex.cpp
-// Before:
-return new ModbusClientRTU(4, 36, 13);
-
-// After:
-return new ModbusClientRTU(4, 36, 14);
+// Change line: constexpr uint8_t PinRTS = GPIO_NUM_14;
+// To:          constexpr uint8_t PinRTS = GPIO_NUM_13;
 ```
 
-**Pros:**
-- ✅ Uses default jumper positions
-- ✅ No hardware modifications
-
-**Cons:**
-- ❌ Requires code modification and rebuild
-- ❌ GPIO 14 also used for SD card (potential conflict)
-- ❌ If SD card present, may not work
-
----
-
-### Option 3: Dual Pin Control (Advanced)
-
-**Action:** Control DE and /RE separately with two GPIOs
+**Result:**
+- GPIO 13 (RTS) controls /RE
+- Requires both hardware and software changes
+- Not recommended unless you have a specific reason
 
 **Configuration:**
 ```

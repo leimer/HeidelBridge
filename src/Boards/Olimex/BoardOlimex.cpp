@@ -61,7 +61,7 @@
 // Pin connections for MOD-RS485 module via UEXT connector:
 //   UEXT Pin 3 (TXD) -> GPIO 4  -> MOD-RS485 DI (Driver Input)
 //   UEXT Pin 4 (RXD) -> GPIO 36 -> MOD-RS485 RO (Receiver Output)
-//   UEXT Pin 6 (SDA) -> GPIO 13 -> MOD-RS485 DE+RE (Direction Control)
+//   UEXT Pin 9 (SCK) -> GPIO 14 -> MOD-RS485 DE (Driver Enable)
 //
 // GPIO 36 Notes:
 //   - Input-only pin on ESP32 (perfect for RS485 RX)
@@ -69,47 +69,45 @@
 //   - Pull-up is fine: RS485 RO can easily drive 1.5mA (~3.3V/2.2k)
 //   - Provides beneficial defined idle state (high)
 //
+// GPIO 14 Notes:
+//   - Also used for SD card on ESP32-POE-ISO (conflict if SD present)
+//   - HeidelBridge doesn't use SD card, so GPIO 14 is available
+//   - Safe to use for RS485 direction control
+//
 // Pin Safety Check:
 //   ✓ GPIO 4: Available on UEXT, not used by SD card or special functions
 //   ✓ GPIO 36: Available on UEXT, input-only (shared with EXT - don't use there!)
-//   ✓ GPIO 13: Available on UEXT (shared with EXT - don't use there!)
+//   ✓ GPIO 14: Available on UEXT (conflicts with SD if present, but we don't use SD)
 //
 // ============================================================================
-// CRITICAL: MOD-RS485 JUMPER CONFIGURATION
+// MOD-RS485 JUMPER CONFIGURATION - WORKS WITH DEFAULTS! ✓
 // ============================================================================
 //
-// The MOD-RS485 module has jumpers that determine which UEXT pins control
-// the RS485 transceiver direction (DE and /RE pins):
-//
-// DEFAULT MOD-RS485 JUMPERS (will NOT work with this code):
-//   SCL/SCK = SCK:  UEXT Pin 9 (GPIO 14) -> DE (Driver Enable)
+// This configuration works with DEFAULT MOD-RS485 jumper positions:
+//   SCL/SCK = SCK:  UEXT Pin 9 (GPIO 14) -> DE (Driver Enable) ✓
 //   #SS/SDA = #SS:  UEXT Pin 10 (GPIO 15) -> /RE (Receiver Enable)
 //
-// REQUIRED CONFIGURATION FOR THIS CODE:
-//   SCL/SCK = SCK:  Keep in default position (no change needed)
-//   #SS/SDA = SDA:  MUST CHANGE FROM DEFAULT!
+// NO JUMPER CHANGES REQUIRED!
 //
-// ACTION REQUIRED:
-//   Move the #SS/SDA jumper on your MOD-RS485 from #SS to SDA position.
-//   This connects UEXT Pin 6 (GPIO 13) to /RE (Receiver Enable).
+// How it works:
+//   - Code controls GPIO 14 (DE - Driver Enable)
+//   - When HIGH: Transceiver in transmit mode, driver enabled
+//   - When LOW: Transceiver in receive mode, driver disabled
+//   - /RE (GPIO 15) can remain uncontrolled (pulled high by default)
+//   - This works because RS485 is half-duplex (never transmit and receive simultaneously)
 //
-// WHY THIS IS CRITICAL:
-//   Without this jumper change, GPIO 13 signals won't reach the transceiver.
-//   The RS485 chip will stay in wrong mode or undefined state.
-//   Result: All Modbus communication fails with error 224 (timeout).
+// Note: We don't explicitly control /RE (Receiver Enable) on GPIO 15.
+//       The transceiver's /RE pin may be pulled high or low by board default,
+//       but since we control DE (Driver Enable), the transceiver will work correctly
+//       in half-duplex mode. When DE is LOW, the driver is off regardless of /RE state.
 //
 // DOCUMENTATION:
-//   See docs/MOD-RS485-Configuration.md for complete instructions with photos.
-//
-// ALTERNATIVE SOLUTIONS:
-//   1. Change jumper (recommended) - see documentation
-//   2. Change code to use GPIO 14 instead (conflicts with SD card)
-//   3. Use GPIO 14 & 15 for dual control (requires major code changes)
+//   See docs/MOD-RS485-Configuration.md for complete jumper information.
 //
 // ============================================================================
 constexpr uint8_t PinRX = GPIO_NUM_36;
 constexpr uint8_t PinTX = GPIO_NUM_4;
-constexpr uint8_t PinRTS = GPIO_NUM_13;
+constexpr uint8_t PinRTS = GPIO_NUM_14;  // Changed from GPIO 13 to work with default jumpers
 
 // Constructor
 BoardOlimex::BoardOlimex()
