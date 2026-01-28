@@ -33,10 +33,9 @@ void Settings::ReadFromPersistentMemory()
     DeviceName = gPreferences.getString("device_name", "HeidelBridge");
     WifiSsid = gPreferences.getString("wifi_ssid");
     WifiPassword = gPreferences.getString("wifi_password");
-    // TEMPORARY: Use static IP by default for initial testing
-    // TODO: Re-enable DHCP after debugging Ethernet connection issues
-    IsEthernetDhcpEnabled = gPreferences.getBool("eth_dhcp", false);
-    EthernetStaticIp = gPreferences.getString("eth_static_ip", "192.168.1.250");
+    // Ethernet DHCP enabled by default, falls back to APIPA (169.254.x.x) if no DHCP server
+    IsEthernetDhcpEnabled = gPreferences.getBool("eth_dhcp", true);
+    EthernetStaticIp = gPreferences.getString("eth_static_ip", "192.168.1.100");
     EthernetGateway = gPreferences.getString("eth_gateway", "192.168.1.1");
     EthernetSubnet = gPreferences.getString("eth_subnet", "255.255.255.0");
     EthernetDns = gPreferences.getString("eth_dns", "8.8.8.8");
