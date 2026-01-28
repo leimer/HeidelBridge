@@ -75,6 +75,38 @@
 //   ✓ GPIO 13: Available on UEXT (shared with EXT - don't use there!)
 //
 // ============================================================================
+// CRITICAL: MOD-RS485 JUMPER CONFIGURATION
+// ============================================================================
+//
+// The MOD-RS485 module has jumpers that determine which UEXT pins control
+// the RS485 transceiver direction (DE and /RE pins):
+//
+// DEFAULT MOD-RS485 JUMPERS (will NOT work with this code):
+//   SCL/SCK = SCK:  UEXT Pin 9 (GPIO 14) -> DE (Driver Enable)
+//   #SS/SDA = #SS:  UEXT Pin 10 (GPIO 15) -> /RE (Receiver Enable)
+//
+// REQUIRED CONFIGURATION FOR THIS CODE:
+//   SCL/SCK = SCK:  Keep in default position (no change needed)
+//   #SS/SDA = SDA:  MUST CHANGE FROM DEFAULT!
+//
+// ACTION REQUIRED:
+//   Move the #SS/SDA jumper on your MOD-RS485 from #SS to SDA position.
+//   This connects UEXT Pin 6 (GPIO 13) to /RE (Receiver Enable).
+//
+// WHY THIS IS CRITICAL:
+//   Without this jumper change, GPIO 13 signals won't reach the transceiver.
+//   The RS485 chip will stay in wrong mode or undefined state.
+//   Result: All Modbus communication fails with error 224 (timeout).
+//
+// DOCUMENTATION:
+//   See docs/MOD-RS485-Configuration.md for complete instructions with photos.
+//
+// ALTERNATIVE SOLUTIONS:
+//   1. Change jumper (recommended) - see documentation
+//   2. Change code to use GPIO 14 instead (conflicts with SD card)
+//   3. Use GPIO 14 & 15 for dual control (requires major code changes)
+//
+// ============================================================================
 constexpr uint8_t PinRX = GPIO_NUM_36;
 constexpr uint8_t PinTX = GPIO_NUM_4;
 constexpr uint8_t PinRTS = GPIO_NUM_13;
