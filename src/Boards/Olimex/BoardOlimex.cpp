@@ -8,8 +8,17 @@
 // ============================================================================
 //
 // Processor: ESP32-WROOM-32E module (ESP32-D0WDQ6 chip, dual-core, 4MB flash)
-// Ethernet PHY: LAN8720A (50MHz external oscillator on GPIO0)
+// Ethernet PHY: ETH8720 chip (LAN8720 compatible)
 // PoE Controller: Si3402-B (IEEE 802.3af/at compliant)
+//
+// ETHERNET PHY CONFIGURATION (Official from ESP32-POE-ISO manual):
+//   Chip: ETH8720 (LAN8720 compatible)
+//   MDC: GPIO 23
+//   MDIO: GPIO 18
+//   PHY Reset: GPIO 12
+//   PHY RMII Clock: GPIO 0 (50MHz input from external oscillator)
+//   PHY Address: 0
+//   RJ45 Connector: Supports both PoE Mode A and Mode B
 //
 // ============================================================================
 // POWER SUPPLY SPECIFICATIONS

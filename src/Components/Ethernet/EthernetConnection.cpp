@@ -55,21 +55,22 @@ namespace EthernetConnection
         // Note: WiFi.onEvent() is used for both WiFi and Ethernet events in ESP32
         WiFi.onEvent(EthernetEventHandler);
 
-        // For Olimex ESP32-POE-ISO, PHY is LAN8720A
+        // For Olimex ESP32-POE-ISO with ETH8720 chip (LAN8720 compatible)
         // ETH.begin(PHY_ADDR, PHY_POWER, PHY_MDC, PHY_MDIO, PHY_TYPE, CLK_MODE)
-        // Olimex ESP32-POE-ISO uses:
-        // PHY_ADDR = 0
-        // PHY_POWER = -1 (no GPIO control - PHY powered from PoE circuit)
-        // PHY_MDC = 23
-        // PHY_MDIO = 18
-        // PHY_TYPE = ETH_PHY_LAN8720
-        // CLK_MODE = ETH_CLOCK_GPIO0_IN (50MHz clock input from PHY on GPIO0)
+        // 
+        // Official pin configuration from ESP32-POE-ISO manual:
+        // PHY_ADDR = 0 (PHY address on MDIO bus)
+        // PHY_POWER/RESET = 12 (GPIO 12 is PHY reset pin)
+        // PHY_MDC = 23 (Management Data Clock)
+        // PHY_MDIO = 18 (Management Data I/O)
+        // PHY_TYPE = ETH_PHY_LAN8720 (ETH8720 is LAN8720 compatible)
+        // CLK_MODE = ETH_CLOCK_GPIO0_IN (50MHz clock input from external oscillator on GPIO0)
         //
-        // Note: PoE power is managed by Si3402-B chip on the board.
-        //       The PHY is always powered when PoE is connected - no GPIO control needed.
-        //       The ESP32-POE-ISO uses external 50MHz oscillator with clock input on GPIO0.
-        Logger::Debug("Starting ETH PHY (LAN8720A)...");
-        ETH.begin(0, -1, 23, 18, ETH_PHY_LAN8720, ETH_CLOCK_GPIO0_IN);
+        // Note: PoE power is managed by Si3402-B chip. The PHY_POWER parameter (GPIO12)
+        //       is used for PHY RESET control, not power control. Proper reset sequence
+        //       during initialization ensures reliable PHY startup.
+        Logger::Debug("Starting ETH PHY (ETH8720/LAN8720A)...");
+        ETH.begin(0, 12, 23, 18, ETH_PHY_LAN8720, ETH_CLOCK_GPIO0_IN);
 
         // Wait for link to come up
         Logger::Debug("Waiting for Ethernet link...");
