@@ -3,6 +3,7 @@
 #include "../../Configuration/Constants.h"
 #include "../../Configuration/Settings.h"
 #include "../../Boards/BoardFactory.h"
+#include "../../Boards/Board.h"
 #include "../Logger/Logger.h"
 #include "WifiConnection.h"
 #include "../Ethernet/EthernetConnection.h"

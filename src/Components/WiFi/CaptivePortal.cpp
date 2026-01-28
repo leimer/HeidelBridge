@@ -4,6 +4,7 @@
 #include "../../Configuration/Constants.h"
 #include "../../Configuration/Settings.h"
 #include "../../Boards/BoardFactory.h"
+#include "../../Boards/Board.h"
 #include "CaptivePortal.h"
 #include "../Ethernet/EthernetConnection.h"
 #include "../Logger/Logger.h"
