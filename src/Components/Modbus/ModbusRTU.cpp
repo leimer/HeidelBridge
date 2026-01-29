@@ -17,25 +17,9 @@ HardwareSerial gRs485Serial(1);                                                /
 SemaphoreHandle_t gMutex = nullptr;                                            // A mutex object for buss access
 
 // Global pin variables for RTScallback (used only by dual-pin boards)
+// These must be global so the lambda can capture them by reference
 static uint8_t gPinDE = 0;
 static uint8_t gPinRE = 0;
-
-// RTScallback function for automatic RS485 direction control
-// Called by ModbusClientRTU library when RTS state changes (dual-pin boards only)
-// level: true = HIGH (transmit mode), false = LOW (receive mode)
-void RS485RTSCallback(bool level)
-{
-    if (level)  // Transmit mode
-    {
-        digitalWrite(gPinDE, HIGH);  // DE = HIGH (driver ON)
-        digitalWrite(gPinRE, HIGH);  // /RE = HIGH (receiver OFF, active LOW)
-    }
-    else  // Receive mode
-    {
-        digitalWrite(gPinDE, LOW);   // DE = LOW (driver OFF)
-        digitalWrite(gPinRE, LOW);   // /RE = LOW (receiver ON, active LOW)
-    }
-}
 
 // Helper function to format Modbus message as hex string
 String FormatModbusMessageHex(ModbusMessage &msg)
@@ -115,7 +99,24 @@ void ModbusRTU::Init()
         // Dual-pin boards (e.g., ESP32-POE-ISO): Use RTScallback for explicit DE+RE control
         gPinDE = BoardFactory::Instance()->GetBoard()->GetPinDE();
         gPinRE = BoardFactory::Instance()->GetBoard()->GetPinRE();
-        gModbusRTU = new ModbusClientRTU(RS485RTSCallback);
+        
+        // Define RTScallback as lambda for automatic RS485 direction control
+        // Called by ModbusClientRTU library when RTS state changes
+        // level: true = HIGH (transmit mode), false = LOW (receive mode)
+        auto rtsCallback = [](bool level) {
+            if (level)  // Transmit mode
+            {
+                digitalWrite(gPinDE, HIGH);  // DE = HIGH (driver ON)
+                digitalWrite(gPinRE, HIGH);  // /RE = HIGH (receiver OFF, active LOW)
+            }
+            else  // Receive mode
+            {
+                digitalWrite(gPinDE, LOW);   // DE = LOW (driver OFF)
+                digitalWrite(gPinRE, LOW);   // /RE = LOW (receiver ON, active LOW)
+            }
+        };
+        
+        gModbusRTU = new ModbusClientRTU(rtsCallback);
     }
     else
     {
