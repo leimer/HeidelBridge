@@ -23,14 +23,16 @@ static bool gUseDualPin = false;
 
 // RTScallback function for automatic RS485 direction control
 // Called by ModbusClientRTU library when RTS state changes
-void RS485RTSCallback(RTSstates state)
+// pin: the pin number (not used, we use our own pin variables)
+// state: true = ACTIVE (transmit mode), false = INACTIVE (receive mode)
+void RS485RTSCallback(uint8_t pin, bool state)
 {
-    static RTSstates previousState = INACTIVE;
+    static bool previousState = false;
     static unsigned long transitionCount = 0;
     
     transitionCount++;
     
-    if (state == ACTIVE)
+    if (state == true)  // ACTIVE (transmit mode)
     {
         // TRANSMIT MODE: Enable driver, disable receiver
         digitalWrite(gPinDE, HIGH);  // DE = HIGH (driver ON)
@@ -40,16 +42,16 @@ void RS485RTSCallback(RTSstates state)
             digitalWrite(gPinRE, HIGH);  // /RE = HIGH (receiver OFF, because /RE is active LOW)
             Logger::Debug("[RS485 #%lu] %s → TRANSMIT (DE=HIGH, /RE=HIGH)", 
                          transitionCount,
-                         previousState == ACTIVE ? "TRANSMIT" : "RECEIVE");
+                         previousState == true ? "TRANSMIT" : "RECEIVE");
         }
         else
         {
             Logger::Debug("[RS485 #%lu] %s → TRANSMIT (DE=HIGH)", 
                          transitionCount,
-                         previousState == ACTIVE ? "TRANSMIT" : "RECEIVE");
+                         previousState == true ? "TRANSMIT" : "RECEIVE");
         }
     }
-    else
+    else  // INACTIVE (receive mode)
     {
         // RECEIVE MODE: Disable driver, enable receiver
         digitalWrite(gPinDE, LOW);   // DE = LOW (driver OFF)
@@ -59,13 +61,13 @@ void RS485RTSCallback(RTSstates state)
             digitalWrite(gPinRE, LOW);   // /RE = LOW (receiver ON, because /RE is active LOW)
             Logger::Debug("[RS485 #%lu] %s → RECEIVE (DE=LOW, /RE=LOW)", 
                          transitionCount,
-                         previousState == ACTIVE ? "TRANSMIT" : "RECEIVE");
+                         previousState == true ? "TRANSMIT" : "RECEIVE");
         }
         else
         {
             Logger::Debug("[RS485 #%lu] %s → RECEIVE (DE=LOW)", 
                          transitionCount,
-                         previousState == ACTIVE ? "TRANSMIT" : "RECEIVE");
+                         previousState == true ? "TRANSMIT" : "RECEIVE");
         }
     }
     
