@@ -117,14 +117,33 @@
 // DOCUMENTATION:
 //   See docs/MOD-RS485-Configuration.md for complete jumper information.
 //
-// ============================================================================
+    // RS485 UEXT Pins (MOD-RS485 Module) - DUAL PIN FULL CONTROL
+    // These pins connect to the MOD-RS485 RS485 transceiver module via UEXT connector
+    //
+    // Pin Assignments (ESP32-POE-ISO):
+    //   TX:  GPIO 4  (UEXT Pin 3 - TXD) → MOD-RS485 DI (Driver Input)
+    //   RX:  GPIO 36 (UEXT Pin 4 - RXD) → MOD-RS485 RO (Receiver Output)
+    //   DE:  GPIO 14 (UEXT Pin 9 - SCK) → MOD-RS485 DE (Driver Enable via SCK jumper)
+    //   /RE: GPIO 5  (UEXT Pin 10 - #SS) → MOD-RS485 /RE (Receiver Enable via #SS jumper)
+    //
+    // MOD-RS485 Jumper Configuration:
+    //   ENABLE_RT: CLOSED (120Ω termination enabled)
+    //   SCL/SCK:   SCK position (default) → GPIO 14 controls DE
+    //   #SS/SDA:   #SS position (default) → GPIO 5 controls /RE
+    //
+    // Direction Control (DUAL-PIN FULL CONTROL):
+    //   Using both DE and /RE for explicit transmit/receive mode control
+    //   Transmit: DE=HIGH (driver on), /RE=LOW (receiver off)
+    //   Receive:  DE=LOW (driver off), /RE=HIGH (receiver on)
+    //
 constexpr uint8_t PinRX = GPIO_NUM_36;
 constexpr uint8_t PinTX = GPIO_NUM_4;
-constexpr uint8_t PinRTS = GPIO_NUM_14;  // Changed from GPIO 13 to work with default jumpers
+constexpr uint8_t PinDE = GPIO_NUM_14;   // Driver Enable (active HIGH)
+constexpr uint8_t PinRE = GPIO_NUM_5;    // Receiver Enable (active LOW)
 
-// Constructor
+// Constructor - Use dual-pin RS485 control
 BoardOlimex::BoardOlimex()
-    : Board(PinRX, PinTX, PinRTS)
+    : Board(PinRX, PinTX, PinDE, PinRE)
 {
   // Nothing to do
 }
@@ -132,9 +151,15 @@ BoardOlimex::BoardOlimex()
 // Initializes the board
 void BoardOlimex::Init()
 {
-  // Configure RTS pin for RS485 DE/RE control
-  pinMode(PinRTS, OUTPUT);
-  digitalWrite(PinRTS, LOW);
+  // Configure DE pin (Driver Enable - active HIGH)
+  pinMode(PinDE, OUTPUT);
+  digitalWrite(PinDE, LOW);  // Start in receive mode (driver off)
+  
+  // Configure /RE pin (Receiver Enable - active LOW)
+  pinMode(PinRE, OUTPUT);
+  digitalWrite(PinRE, LOW);  // Start in receive mode (receiver enabled, /RE=LOW means ON)
+  
+  Logger::Info("RS485 dual-pin control initialized: DE=GPIO%d, /RE=GPIO%d", PinDE, PinRE);
 }
 
 // Logs board name/information

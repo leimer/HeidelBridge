@@ -16,6 +16,27 @@ ModbusClientRTU *gModbusRTU = nullptr;                                         /
 HardwareSerial gRs485Serial(1);                                                // Define a Serial for UART1
 SemaphoreHandle_t gMutex = nullptr;                                            // A mutex object for buss access
 
+// Helper functions for dual-pin RS485 control
+void SetRS485TransmitMode()
+{
+    if (BoardFactory::Instance()->GetBoard()->HasDualPinRS485())
+    {
+        uint8_t pinRE = BoardFactory::Instance()->GetBoard()->GetPinRE();
+        // Transmit mode: /RE = HIGH (receiver DISABLED, because /RE is active LOW)
+        digitalWrite(pinRE, HIGH);
+    }
+}
+
+void SetRS485ReceiveMode()
+{
+    if (BoardFactory::Instance()->GetBoard()->HasDualPinRS485())
+    {
+        uint8_t pinRE = BoardFactory::Instance()->GetBoard()->GetPinRE();
+        // Receive mode: /RE = LOW (receiver ENABLED, because /RE is active LOW)
+        digitalWrite(pinRE, LOW);
+    }
+}
+
 // Helper function to format Modbus message as hex string
 String FormatModbusMessageHex(ModbusMessage &msg)
 {
@@ -78,8 +99,8 @@ void ModbusRTU::Init()
     // Get pin configuration
     uint8_t pinTx = BoardFactory::Instance()->GetBoard()->GetPinTx();
     uint8_t pinRx = BoardFactory::Instance()->GetBoard()->GetPinRx();
-    uint8_t pinRts = BoardFactory::Instance()->GetBoard()->GetPinRts();
-
+    bool dualPin = BoardFactory::Instance()->GetBoard()->HasDualPinRS485();
+    
     // Init serial conneted to the RTU Modbus
     Logger::Info("========================================");
     Logger::Info("RS485 ModbusRTU Initialization");
@@ -87,7 +108,22 @@ void ModbusRTU::Init()
     Logger::Info("Hardware Configuration:");
     Logger::Info("  TX Pin (DI):  GPIO %d → MOD-RS485 Driver Input", pinTx);
     Logger::Info("  RX Pin (RO):  GPIO %d → MOD-RS485 Receiver Output", pinRx);
-    Logger::Info("  RTS Pin (DE): GPIO %d → MOD-RS485 Direction Control", pinRts);
+    
+    if (dualPin)
+    {
+        uint8_t pinDE = BoardFactory::Instance()->GetBoard()->GetPinDE();
+        uint8_t pinRE = BoardFactory::Instance()->GetBoard()->GetPinRE();
+        Logger::Info("  DE Pin:       GPIO %d → MOD-RS485 Driver Enable (active HIGH)", pinDE);
+        Logger::Info("  /RE Pin:      GPIO %d → MOD-RS485 Receiver Enable (active LOW)", pinRE);
+        Logger::Info("  Mode:         DUAL-PIN FULL CONTROL");
+    }
+    else
+    {
+        uint8_t pinRts = BoardFactory::Instance()->GetBoard()->GetPinRts();
+        Logger::Info("  RTS Pin (DE): GPIO %d → MOD-RS485 Direction Control", pinRts);
+        Logger::Info("  Mode:         SINGLE-PIN CONTROL");
+    }
+    
     Logger::Info("");
     Logger::Info("Serial Configuration:");
     Logger::Info("  Baud Rate: %d bps", Constants::HeidelbergWallbox::ModbusBaudrate);
@@ -110,9 +146,21 @@ void ModbusRTU::Init()
         pinRx,
         pinTx);
 
-    // Create Modbus RTU client with RTS pin (must be done here, not as global)
-    Logger::Debug("Creating ModbusClientRTU with RTS pin GPIO %d", pinRts);
-    gModbusRTU = new ModbusClientRTU(pinRts);
+    // Create Modbus RTU client
+    // For dual-pin control, we'll use the DE pin for the library's RTS
+    // and manually control /RE pin
+    if (dualPin)
+    {
+        uint8_t pinDE = BoardFactory::Instance()->GetBoard()->GetPinDE();
+        Logger::Debug("Creating ModbusClientRTU with dual-pin control: DE=GPIO%d", pinDE);
+        gModbusRTU = new ModbusClientRTU(pinDE);
+    }
+    else
+    {
+        uint8_t pinRts = BoardFactory::Instance()->GetBoard()->GetPinRts();
+        Logger::Debug("Creating ModbusClientRTU with RTS pin GPIO %d", pinRts);
+        gModbusRTU = new ModbusClientRTU(pinRts);
+    }
     
     // Start Modbus RTU
     gModbusRTU->setTimeout(Constants::HeidelbergWallbox::ModbusTimeoutMs);
@@ -138,6 +186,9 @@ bool ModbusRTU::ReadRegisters(uint16_t startAddress, uint8_t numValues, uint8_t 
         // Try to get the mutex
         if (xSemaphoreTake(gMutex, portMAX_DELAY))
         {
+            // For dual-pin RS485: Set transmit mode before sending
+            SetRS485TransmitMode();
+            
             ModbusMessage response = gModbusRTU->syncRequest(
                 0,
                 Constants::HeidelbergWallbox::ModbusServerId,
@@ -145,6 +196,9 @@ bool ModbusRTU::ReadRegisters(uint16_t startAddress, uint8_t numValues, uint8_t 
                 startAddress,
                 numValues);
 
+            // For dual-pin RS485: Set receive mode after transaction
+            SetRS485ReceiveMode();
+            
             // Free mutex
             xSemaphoreGive(gMutex);
 
@@ -236,7 +290,12 @@ bool ModbusRTU::WriteHoldRegister16(uint16_t address, uint16_t value)
         // Try to get the mutex
         if (xSemaphoreTake(gMutex, portMAX_DELAY))
         {
-            // Build the request (note: this creates the request but we need to intercept it)
+            // For dual-pin RS485: Set transmit mode before sending
+            // The library will control DE (Driver Enable) via its RTS pin
+            // We manually control /RE (Receiver Enable)
+            SetRS485TransmitMode();
+            
+            // Build and send the request
             ModbusMessage response = gModbusRTU->syncRequest(
                 0,
                 Constants::HeidelbergWallbox::ModbusServerId,
@@ -244,6 +303,9 @@ bool ModbusRTU::WriteHoldRegister16(uint16_t address, uint16_t value)
                 address,
                 value);
 
+            // For dual-pin RS485: Set receive mode after transaction
+            SetRS485ReceiveMode();
+            
             // Free mutex
             xSemaphoreGive(gMutex);
 
