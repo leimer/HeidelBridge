@@ -68,10 +68,10 @@
 //
 // ESP32-POE-ISO (this board):
 //   UEXT Pin 9 (SCK): GPIO 14
-//   UEXT Pin 10 (#SS): GPIO 15
+//   UEXT Pin 10 (#SS): GPIO 5
 //
 // ESP32-POE (non-ISO variant):
-//   UEXT Pin 9 (SCK): GPIO 2
+//   UEXT Pin 9 (SCK): GPIO 2  
 //   UEXT Pin 10 (#SS): GPIO 5
 //
 // Always verify your board model! Using wrong pins = communication failure.
@@ -98,21 +98,15 @@
 //
 // This configuration works with DEFAULT MOD-RS485 jumper positions:
 //   SCL/SCK = SCK:  UEXT Pin 9 (GPIO 14) -> DE (Driver Enable) ✓
-//   #SS/SDA = #SS:  UEXT Pin 10 (GPIO 15) -> /RE (Receiver Enable)
+//   #SS/SDA = #SS:  UEXT Pin 10 (GPIO 5) -> /RE (Receiver Enable) ✓
 //
 // NO JUMPER CHANGES REQUIRED!
 //
-// How it works:
-//   - Code controls GPIO 14 (DE - Driver Enable)
-//   - When HIGH: Transceiver in transmit mode, driver enabled
-//   - When LOW: Transceiver in receive mode, driver disabled
-//   - /RE (GPIO 15) can remain uncontrolled (pulled high by default)
-//   - This works because RS485 is half-duplex (never transmit and receive simultaneously)
-//
-// Note: We don't explicitly control /RE (Receiver Enable) on GPIO 15.
-//       The transceiver's /RE pin may be pulled high or low by board default,
-//       but since we control DE (Driver Enable), the transceiver will work correctly
-//       in half-duplex mode. When DE is LOW, the driver is off regardless of /RE state.
+// How it works (DUAL-PIN FULL CONTROL):
+//   - Code controls GPIO 14 (DE - Driver Enable) and GPIO 5 (/RE - Receiver Enable)
+//   - Transmit mode: DE=HIGH (driver on), /RE=HIGH (receiver off)
+//   - Receive mode: DE=LOW (driver off), /RE=LOW (receiver on)
+//   - Automatic mode switching via RTScallback from eModbus library
 //
 // DOCUMENTATION:
 //   See docs/MOD-RS485-Configuration.md for complete jumper information.
@@ -151,15 +145,37 @@ BoardOlimex::BoardOlimex()
 // Initializes the board
 void BoardOlimex::Init()
 {
+  Logger::Info("========================================");
+  Logger::Info("BoardOlimex Initialization");
+  Logger::Info("========================================");
+  
+  // Log pin configuration
+  Logger::Info("RS485 Pin Configuration:");
+  Logger::Info("  TX  (UEXT Pin 3):  GPIO %d", PinTX);
+  Logger::Info("  RX  (UEXT Pin 4):  GPIO %d (input-only, 2.2k pull-up)", PinRX);
+  Logger::Info("  DE  (UEXT Pin 9):  GPIO %d (Driver Enable, active HIGH)", PinDE);
+  Logger::Info("  /RE (UEXT Pin 10): GPIO %d (Receiver Enable, active LOW)", PinRE);
+  
   // Configure DE pin (Driver Enable - active HIGH)
   pinMode(PinDE, OUTPUT);
   digitalWrite(PinDE, LOW);  // Start in receive mode (driver off)
+  Logger::Debug("GPIO %d (DE) configured as OUTPUT, initial state: LOW (driver OFF)", PinDE);
   
   // Configure /RE pin (Receiver Enable - active LOW)
   pinMode(PinRE, OUTPUT);
   digitalWrite(PinRE, LOW);  // Start in receive mode (receiver enabled, /RE=LOW means ON)
+  Logger::Debug("GPIO %d (/RE) configured as OUTPUT, initial state: LOW (receiver ON)", PinRE);
   
-  Logger::Info("RS485 dual-pin control initialized: DE=GPIO%d, /RE=GPIO%d", PinDE, PinRE);
+  // Verify pin states
+  int deState = digitalRead(PinDE);
+  int reState = digitalRead(PinRE);
+  Logger::Info("Pin state verification:");
+  Logger::Info("  DE  (GPIO %d): %s (expected: LOW)", PinDE, deState == LOW ? "LOW ✓" : "HIGH ✗");
+  Logger::Info("  /RE (GPIO %d): %s (expected: LOW)", PinRE, reState == LOW ? "LOW ✓" : "HIGH ✗");
+  Logger::Info("  Mode: RECEIVE (driver off, receiver on)");
+  
+  Logger::Info("RS485 dual-pin control initialized successfully");
+  Logger::Info("========================================");
 }
 
 // Logs board name/information

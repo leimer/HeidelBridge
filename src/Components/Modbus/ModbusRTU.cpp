@@ -16,7 +16,63 @@ ModbusClientRTU *gModbusRTU = nullptr;                                         /
 HardwareSerial gRs485Serial(1);                                                // Define a Serial for UART1
 SemaphoreHandle_t gMutex = nullptr;                                            // A mutex object for buss access
 
-// Helper functions for dual-pin RS485 control
+// Global pin variables for RTScallback
+static uint8_t gPinDE = 0;
+static uint8_t gPinRE = 0;
+static bool gUseDualPin = false;
+
+// RTScallback function for automatic RS485 direction control
+// Called by ModbusClientRTU library when RTS state changes
+void RS485RTSCallback(RTSstates state)
+{
+    static RTSstates previousState = INACTIVE;
+    static unsigned long transitionCount = 0;
+    
+    transitionCount++;
+    
+    if (state == ACTIVE)
+    {
+        // TRANSMIT MODE: Enable driver, disable receiver
+        digitalWrite(gPinDE, HIGH);  // DE = HIGH (driver ON)
+        
+        if (gUseDualPin)
+        {
+            digitalWrite(gPinRE, HIGH);  // /RE = HIGH (receiver OFF, because /RE is active LOW)
+            Logger::Debug("[RS485 #%lu] %s → TRANSMIT (DE=HIGH, /RE=HIGH)", 
+                         transitionCount,
+                         previousState == ACTIVE ? "TRANSMIT" : "RECEIVE");
+        }
+        else
+        {
+            Logger::Debug("[RS485 #%lu] %s → TRANSMIT (DE=HIGH)", 
+                         transitionCount,
+                         previousState == ACTIVE ? "TRANSMIT" : "RECEIVE");
+        }
+    }
+    else
+    {
+        // RECEIVE MODE: Disable driver, enable receiver
+        digitalWrite(gPinDE, LOW);   // DE = LOW (driver OFF)
+        
+        if (gUseDualPin)
+        {
+            digitalWrite(gPinRE, LOW);   // /RE = LOW (receiver ON, because /RE is active LOW)
+            Logger::Debug("[RS485 #%lu] %s → RECEIVE (DE=LOW, /RE=LOW)", 
+                         transitionCount,
+                         previousState == ACTIVE ? "TRANSMIT" : "RECEIVE");
+        }
+        else
+        {
+            Logger::Debug("[RS485 #%lu] %s → RECEIVE (DE=LOW)", 
+                         transitionCount,
+                         previousState == ACTIVE ? "TRANSMIT" : "RECEIVE");
+        }
+    }
+    
+    previousState = state;
+}
+
+// Helper functions for dual-pin RS485 control (kept for backwards compatibility but not used with callback)
 void SetRS485TransmitMode()
 {
     if (BoardFactory::Instance()->GetBoard()->HasDualPinRS485())
@@ -146,26 +202,27 @@ void ModbusRTU::Init()
         pinRx,
         pinTx);
 
-    // Create Modbus RTU client
-    // For dual-pin control, we'll use the DE pin for the library's RTS
-    // and manually control /RE pin
+    // Store pins for RTScallback
     if (dualPin)
     {
-        uint8_t pinDE = BoardFactory::Instance()->GetBoard()->GetPinDE();
-        Logger::Debug("Creating ModbusClientRTU with dual-pin control: DE=GPIO%d", pinDE);
-        gModbusRTU = new ModbusClientRTU(pinDE);
+        gPinDE = BoardFactory::Instance()->GetBoard()->GetPinDE();
+        gPinRE = BoardFactory::Instance()->GetBoard()->GetPinRE();
+        gUseDualPin = true;
+        Logger::Debug("Creating ModbusClientRTU with RTScallback for dual-pin control (DE=GPIO%d, /RE=GPIO%d)", gPinDE, gPinRE);
+        gModbusRTU = new ModbusClientRTU(RS485RTSCallback);
     }
     else
     {
-        uint8_t pinRts = BoardFactory::Instance()->GetBoard()->GetPinRts();
-        Logger::Debug("Creating ModbusClientRTU with RTS pin GPIO %d", pinRts);
-        gModbusRTU = new ModbusClientRTU(pinRts);
+        gPinDE = BoardFactory::Instance()->GetBoard()->GetPinRts();
+        gUseDualPin = false;
+        Logger::Debug("Creating ModbusClientRTU with RTScallback for single-pin control (DE=GPIO%d)", gPinDE);
+        gModbusRTU = new ModbusClientRTU(RS485RTSCallback);
     }
     
     // Start Modbus RTU
     gModbusRTU->setTimeout(Constants::HeidelbergWallbox::ModbusTimeoutMs);
     gModbusRTU->begin(gRs485Serial); // Start ModbusRTU background task
-    Logger::Info("ModbusRTU client started successfully");
+    Logger::Info("ModbusRTU client started successfully with automatic RTS control");
     Logger::Info("========================================");
 }
 
@@ -186,9 +243,7 @@ bool ModbusRTU::ReadRegisters(uint16_t startAddress, uint8_t numValues, uint8_t 
         // Try to get the mutex
         if (xSemaphoreTake(gMutex, portMAX_DELAY))
         {
-            // For dual-pin RS485: Set transmit mode before sending
-            SetRS485TransmitMode();
-            
+            // RTScallback automatically handles mode switching
             ModbusMessage response = gModbusRTU->syncRequest(
                 0,
                 Constants::HeidelbergWallbox::ModbusServerId,
@@ -196,9 +251,6 @@ bool ModbusRTU::ReadRegisters(uint16_t startAddress, uint8_t numValues, uint8_t 
                 startAddress,
                 numValues);
 
-            // For dual-pin RS485: Set receive mode after transaction
-            SetRS485ReceiveMode();
-            
             // Free mutex
             xSemaphoreGive(gMutex);
 
@@ -290,11 +342,7 @@ bool ModbusRTU::WriteHoldRegister16(uint16_t address, uint16_t value)
         // Try to get the mutex
         if (xSemaphoreTake(gMutex, portMAX_DELAY))
         {
-            // For dual-pin RS485: Set transmit mode before sending
-            // The library will control DE (Driver Enable) via its RTS pin
-            // We manually control /RE (Receiver Enable)
-            SetRS485TransmitMode();
-            
+            // RTScallback automatically handles mode switching
             // Build and send the request
             ModbusMessage response = gModbusRTU->syncRequest(
                 0,
@@ -303,9 +351,6 @@ bool ModbusRTU::WriteHoldRegister16(uint16_t address, uint16_t value)
                 address,
                 value);
 
-            // For dual-pin RS485: Set receive mode after transaction
-            SetRS485ReceiveMode();
-            
             // Free mutex
             xSemaphoreGive(gMutex);
 
