@@ -116,21 +116,21 @@ void ModbusRTU::Init()
         pinRx,
         pinTx);
 
-    // Store pins for RTScallback
+    // Create ModbusClientRTU with appropriate constructor
     if (dualPin)
     {
+        // Dual-pin boards (e.g., ESP32-POE-ISO): Use RTScallback for explicit DE+RE control
         gPinDE = BoardFactory::Instance()->GetBoard()->GetPinDE();
         gPinRE = BoardFactory::Instance()->GetBoard()->GetPinRE();
         gUseDualPin = true;
+        gModbusRTU = new ModbusClientRTU(RS485RTSCallback);
     }
     else
     {
-        gPinDE = BoardFactory::Instance()->GetBoard()->GetPinRts();
-        gUseDualPin = false;
+        // Single-pin boards (e.g., ESP32, Lilygo): Let library handle RTS pin directly
+        uint8_t pinRts = BoardFactory::Instance()->GetBoard()->GetPinRts();
+        gModbusRTU = new ModbusClientRTU(pinRts);
     }
-    
-    // Create ModbusClientRTU with RTScallback
-    gModbusRTU = new ModbusClientRTU(RS485RTSCallback);
     
     // Start Modbus RTU
     gModbusRTU->setTimeout(Constants::HeidelbergWallbox::ModbusTimeoutMs);
