@@ -8,7 +8,11 @@
 #include "../../Boards/Board.h"
 #include "ModbusRTU.h"
 
-ModbusClientRTU gModbusRTU(BoardFactory::Instance()->GetBoard()->GetPinRts()); // Create a ModbusRTU client instance
+// NOTE: ModbusClientRTU cannot be initialized as global variable because
+// BoardFactory::Instance()->GetBoard()->GetPinRts() requires BoardFactory to be
+// initialized first. Global initialization order is undefined in C++.
+// We use a pointer and initialize it in Init() instead.
+ModbusClientRTU *gModbusRTU = nullptr;                                         // ModbusRTU client instance (initialized in Init())
 HardwareSerial gRs485Serial(1);                                                // Define a Serial for UART1
 SemaphoreHandle_t gMutex = nullptr;                                            // A mutex object for buss access
 
@@ -106,10 +110,13 @@ void ModbusRTU::Init()
         pinRx,
         pinTx);
 
+    // Create Modbus RTU client with RTS pin (must be done here, not as global)
+    Logger::Debug("Creating ModbusClientRTU with RTS pin GPIO %d", pinRts);
+    gModbusRTU = new ModbusClientRTU(pinRts);
+    
     // Start Modbus RTU
-    Logger::Debug("Creating Modbus RTU client with RTS pin %d", pinRts);
-    gModbusRTU.setTimeout(Constants::HeidelbergWallbox::ModbusTimeoutMs);
-    gModbusRTU.begin(gRs485Serial); // Start ModbusRTU background task
+    gModbusRTU->setTimeout(Constants::HeidelbergWallbox::ModbusTimeoutMs);
+    gModbusRTU->begin(gRs485Serial); // Start ModbusRTU background task
     Logger::Info("ModbusRTU client started successfully");
     Logger::Info("========================================");
 }
@@ -131,7 +138,7 @@ bool ModbusRTU::ReadRegisters(uint16_t startAddress, uint8_t numValues, uint8_t 
         // Try to get the mutex
         if (xSemaphoreTake(gMutex, portMAX_DELAY))
         {
-            ModbusMessage response = gModbusRTU.syncRequest(
+            ModbusMessage response = gModbusRTU->syncRequest(
                 0,
                 Constants::HeidelbergWallbox::ModbusServerId,
                 (FunctionCode)fc,
@@ -230,7 +237,7 @@ bool ModbusRTU::WriteHoldRegister16(uint16_t address, uint16_t value)
         if (xSemaphoreTake(gMutex, portMAX_DELAY))
         {
             // Build the request (note: this creates the request but we need to intercept it)
-            ModbusMessage response = gModbusRTU.syncRequest(
+            ModbusMessage response = gModbusRTU->syncRequest(
                 0,
                 Constants::HeidelbergWallbox::ModbusServerId,
                 WRITE_HOLD_REGISTER,
