@@ -10,7 +10,6 @@
 // ESP32 GPIO5  -> MOD-RS485 /RE (Receiver Enable, active LOW)
 //
 // Note: Uses dual-pin RS485 control for explicit transmit/receive mode switching
-// For detailed hardware information, see docs/ESP32-POE-ISO-Hardware.md
 constexpr uint8_t PinRX = GPIO_NUM_36;
 constexpr uint8_t PinTX = GPIO_NUM_4;
 constexpr uint8_t PinDE = GPIO_NUM_14;
