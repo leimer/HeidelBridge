@@ -16,31 +16,24 @@ ModbusClientRTU *gModbusRTU = nullptr;                                         /
 HardwareSerial gRs485Serial(1);                                                // Define a Serial for UART1
 SemaphoreHandle_t gMutex = nullptr;                                            // A mutex object for buss access
 
-// Global pin variables for RTScallback
+// Global pin variables for RTScallback (used only by dual-pin boards)
 static uint8_t gPinDE = 0;
 static uint8_t gPinRE = 0;
-static bool gUseDualPin = false;
 
 // RTScallback function for automatic RS485 direction control
-// Called by ModbusClientRTU library when RTS state changes
+// Called by ModbusClientRTU library when RTS state changes (dual-pin boards only)
 // level: true = HIGH (transmit mode), false = LOW (receive mode)
 void RS485RTSCallback(bool level)
 {
     if (level)  // Transmit mode
     {
         digitalWrite(gPinDE, HIGH);  // DE = HIGH (driver ON)
-        if (gUseDualPin)
-        {
-            digitalWrite(gPinRE, HIGH);  // /RE = HIGH (receiver OFF, active LOW)
-        }
+        digitalWrite(gPinRE, HIGH);  // /RE = HIGH (receiver OFF, active LOW)
     }
     else  // Receive mode
     {
         digitalWrite(gPinDE, LOW);   // DE = LOW (driver OFF)
-        if (gUseDualPin)
-        {
-            digitalWrite(gPinRE, LOW);   // /RE = LOW (receiver ON, active LOW)
-        }
+        digitalWrite(gPinRE, LOW);   // /RE = LOW (receiver ON, active LOW)
     }
 }
 
@@ -122,7 +115,6 @@ void ModbusRTU::Init()
         // Dual-pin boards (e.g., ESP32-POE-ISO): Use RTScallback for explicit DE+RE control
         gPinDE = BoardFactory::Instance()->GetBoard()->GetPinDE();
         gPinRE = BoardFactory::Instance()->GetBoard()->GetPinRE();
-        gUseDualPin = true;
         gModbusRTU = new ModbusClientRTU(RS485RTSCallback);
     }
     else
