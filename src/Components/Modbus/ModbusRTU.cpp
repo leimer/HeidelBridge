@@ -23,76 +23,24 @@ static bool gUseDualPin = false;
 
 // RTScallback function for automatic RS485 direction control
 // Called by ModbusClientRTU library when RTS state changes
-// RTScallback for eModbus library
 // level: true = HIGH (transmit mode), false = LOW (receive mode)
-// Per official docs: void func(bool level);
 void RS485RTSCallback(bool level)
 {
-    static bool previousLevel = false;
-    static unsigned long transitionCount = 0;
-    
-    transitionCount++;
-    
-    if (level == true)  // HIGH = transmit mode
+    if (level)  // Transmit mode
     {
-        // TRANSMIT MODE: Enable driver, disable receiver
         digitalWrite(gPinDE, HIGH);  // DE = HIGH (driver ON)
-        
         if (gUseDualPin)
         {
-            digitalWrite(gPinRE, HIGH);  // /RE = HIGH (receiver OFF, because /RE is active LOW)
-            Logger::Debug("[RS485 #%lu] %s → TRANSMIT (DE=HIGH, /RE=HIGH)", 
-                         transitionCount,
-                         previousLevel == true ? "TRANSMIT" : "RECEIVE");
-        }
-        else
-        {
-            Logger::Debug("[RS485 #%lu] %s → TRANSMIT (DE=HIGH)", 
-                         transitionCount,
-                         previousLevel == true ? "TRANSMIT" : "RECEIVE");
+            digitalWrite(gPinRE, HIGH);  // /RE = HIGH (receiver OFF, active LOW)
         }
     }
-    else  // LOW = receive mode
+    else  // Receive mode
     {
-        // RECEIVE MODE: Disable driver, enable receiver
         digitalWrite(gPinDE, LOW);   // DE = LOW (driver OFF)
-        
         if (gUseDualPin)
         {
-            digitalWrite(gPinRE, LOW);   // /RE = LOW (receiver ON, because /RE is active LOW)
-            Logger::Debug("[RS485 #%lu] %s → RECEIVE (DE=LOW, /RE=LOW)", 
-                         transitionCount,
-                         previousLevel == true ? "TRANSMIT" : "RECEIVE");
+            digitalWrite(gPinRE, LOW);   // /RE = LOW (receiver ON, active LOW)
         }
-        else
-        {
-            Logger::Debug("[RS485 #%lu] %s → RECEIVE (DE=LOW)", 
-                         transitionCount,
-                         previousLevel == true ? "TRANSMIT" : "RECEIVE");
-        }
-    }
-    
-    previousLevel = level;
-}
-
-// Helper functions for dual-pin RS485 control (kept for backwards compatibility but not used with callback)
-void SetRS485TransmitMode()
-{
-    if (BoardFactory::Instance()->GetBoard()->HasDualPinRS485())
-    {
-        uint8_t pinRE = BoardFactory::Instance()->GetBoard()->GetPinRE();
-        // Transmit mode: /RE = HIGH (receiver DISABLED, because /RE is active LOW)
-        digitalWrite(pinRE, HIGH);
-    }
-}
-
-void SetRS485ReceiveMode()
-{
-    if (BoardFactory::Instance()->GetBoard()->HasDualPinRS485())
-    {
-        uint8_t pinRE = BoardFactory::Instance()->GetBoard()->GetPinRE();
-        // Receive mode: /RE = LOW (receiver ENABLED, because /RE is active LOW)
-        digitalWrite(pinRE, LOW);
     }
 }
 
@@ -160,44 +108,7 @@ void ModbusRTU::Init()
     uint8_t pinRx = BoardFactory::Instance()->GetBoard()->GetPinRx();
     bool dualPin = BoardFactory::Instance()->GetBoard()->HasDualPinRS485();
     
-    // Init serial conneted to the RTU Modbus
-    Logger::Info("========================================");
-    Logger::Info("RS485 ModbusRTU Initialization");
-    Logger::Info("========================================");
-    Logger::Info("Hardware Configuration:");
-    Logger::Info("  TX Pin (DI):  GPIO %d → MOD-RS485 Driver Input", pinTx);
-    Logger::Info("  RX Pin (RO):  GPIO %d → MOD-RS485 Receiver Output", pinRx);
-    
-    if (dualPin)
-    {
-        uint8_t pinDE = BoardFactory::Instance()->GetBoard()->GetPinDE();
-        uint8_t pinRE = BoardFactory::Instance()->GetBoard()->GetPinRE();
-        Logger::Info("  DE Pin:       GPIO %d → MOD-RS485 Driver Enable (active HIGH)", pinDE);
-        Logger::Info("  /RE Pin:      GPIO %d → MOD-RS485 Receiver Enable (active LOW)", pinRE);
-        Logger::Info("  Mode:         DUAL-PIN FULL CONTROL");
-    }
-    else
-    {
-        uint8_t pinRts = BoardFactory::Instance()->GetBoard()->GetPinRts();
-        Logger::Info("  RTS Pin (DE): GPIO %d → MOD-RS485 Direction Control", pinRts);
-        Logger::Info("  Mode:         SINGLE-PIN CONTROL");
-    }
-    
-    Logger::Info("");
-    Logger::Info("Serial Configuration:");
-    Logger::Info("  Baud Rate: %d bps", Constants::HeidelbergWallbox::ModbusBaudrate);
-    Logger::Info("  Data Bits: 8");
-    Logger::Info("  Parity:    Even");
-    Logger::Info("  Stop Bits: 1");
-    Logger::Info("  Mode:      SERIAL_8E1");
-    Logger::Info("");
-    Logger::Info("Modbus Configuration:");
-    Logger::Info("  Server ID: %d (wallbox slave address)", Constants::HeidelbergWallbox::ModbusServerId);
-    Logger::Info("  Timeout:   %d ms", Constants::HeidelbergWallbox::ModbusTimeoutMs);
-    Logger::Info("  Retries:   %d (write), %d (read)", 
-                 Constants::ModbusRTU::NumWriteRetries, Constants::ModbusRTU::NumReadRetries);
-    Logger::Info("========================================");
-    
+    // Init serial connected to the RTU Modbus
     RTUutils::prepareHardwareSerial(gRs485Serial);
     gRs485Serial.begin(
         Constants::HeidelbergWallbox::ModbusBaudrate,
@@ -211,22 +122,19 @@ void ModbusRTU::Init()
         gPinDE = BoardFactory::Instance()->GetBoard()->GetPinDE();
         gPinRE = BoardFactory::Instance()->GetBoard()->GetPinRE();
         gUseDualPin = true;
-        Logger::Debug("Creating ModbusClientRTU with RTScallback for dual-pin control (DE=GPIO%d, /RE=GPIO%d)", gPinDE, gPinRE);
-        gModbusRTU = new ModbusClientRTU(RS485RTSCallback);
     }
     else
     {
         gPinDE = BoardFactory::Instance()->GetBoard()->GetPinRts();
         gUseDualPin = false;
-        Logger::Debug("Creating ModbusClientRTU with RTScallback for single-pin control (DE=GPIO%d)", gPinDE);
-        gModbusRTU = new ModbusClientRTU(RS485RTSCallback);
     }
+    
+    // Create ModbusClientRTU with RTScallback
+    gModbusRTU = new ModbusClientRTU(RS485RTSCallback);
     
     // Start Modbus RTU
     gModbusRTU->setTimeout(Constants::HeidelbergWallbox::ModbusTimeoutMs);
-    gModbusRTU->begin(gRs485Serial); // Start ModbusRTU background task
-    Logger::Info("ModbusRTU client started successfully with automatic RTS control");
-    Logger::Info("========================================");
+    gModbusRTU->begin(gRs485Serial);
 }
 
 // Reads multiple registers starting from the specified address
@@ -322,46 +230,17 @@ bool ModbusRTU::WriteHoldRegister16(uint16_t address, uint16_t value)
     uint8_t lastError = 0;
     uint8_t attemptNumber = 0;
 
-    Logger::Info("┌─────────────────────────────────────────────");
-    Logger::Info("│ ModbusRTU WRITE Request");
-    Logger::Info("├─────────────────────────────────────────────");
-    Logger::Info("│ Server ID:   %d", Constants::HeidelbergWallbox::ModbusServerId);
-    Logger::Info("│ Function:    0x06 (Write Single Register)");
-    Logger::Info("│ Address:     %d (0x%04X)", address, address);
-    Logger::Info("│ Value:       %d (0x%04X)", value, value);
-    Logger::Info("│ GPIO Usage:  TX=%d RX=%d RTS=%d", 
-                 BoardFactory::Instance()->GetBoard()->GetPinTx(),
-                 BoardFactory::Instance()->GetBoard()->GetPinRx(),
-                 BoardFactory::Instance()->GetBoard()->GetPinRts());
-    Logger::Info("└─────────────────────────────────────────────");
+    Logger::Debug("ModbusRTU write: Server=%d, Addr=%d, Value=%d (0x%04X)", 
+                  Constants::HeidelbergWallbox::ModbusServerId, address, value, value);
 
     while (numTries > 0)
     {
         attemptNumber++;
         
-        Logger::Info(">>> Attempt %d/%d: Preparing request...", 
-                     attemptNumber, 1 + Constants::ModbusRTU::NumWriteRetries);
-        
-        // Log what we're about to send (BEFORE transmission)
-        Logger::Info(">>> TX FRAME: 01 06 %02X %02X %02X %02X [+CRC]", 
-                    (address >> 8) & 0xFF, address & 0xFF,
-                    (value >> 8) & 0xFF, value & 0xFF);
-        Logger::Debug("    Structure: [ServerID=0x01][FC=0x06][Addr=0x%04X][Value=0x%04X][CRC]", address, value);
-        
         // Try to get the mutex
         if (xSemaphoreTake(gMutex, portMAX_DELAY))
         {
-            Logger::Debug(">>> Calling syncRequest()...");
-            Logger::Debug("    - RTScallback will switch to TRANSMIT mode");
-            Logger::Debug("    - Library will transmit frame bit-by-bit at %d baud", Constants::HeidelbergWallbox::ModbusBaudrate);
-            Logger::Debug("    - RTScallback will switch to RECEIVE mode");
-            Logger::Debug("    - Library will wait for and receive response");
-            
-            // RTScallback automatically handles mode switching:
-            // 1. Library calls RS485RTSCallback(true) → TRANSMIT mode
-            // 2. Library transmits the frame on RS485 bus
-            // 3. Library calls RS485RTSCallback(false) → RECEIVE mode  
-            // 4. Library waits for and receives response
+            // RTScallback automatically handles mode switching
             ModbusMessage response = gModbusRTU->syncRequest(
                 0,
                 Constants::HeidelbergWallbox::ModbusServerId,
@@ -369,61 +248,37 @@ bool ModbusRTU::WriteHoldRegister16(uint16_t address, uint16_t value)
                 address,
                 value);
 
-            Logger::Debug("<<< syncRequest() completed, processing response...");
-            
             // Free mutex
             xSemaphoreGive(gMutex);
 
             lastError = response.getError();
             
-            // Log the response
-            String responseHex = FormatModbusMessageHex(response);
-            Logger::Info("<<< RX BYTES: %s", responseHex.c_str());
-            
             if (lastError == SUCCESS)
             {
-                Logger::Info("<<< Response: SUCCESS");
-                Logger::Info("└─────────────────────────────────────────────");
-                Logger::Info("✓ Write completed successfully on attempt %d", attemptNumber);
-                Logger::Info("");
+                Logger::Trace("ModbusRTU write successful on attempt %d", attemptNumber);
                 return true;
             }
             else
             {
-                // Write failed - log detailed error info
-                Logger::Error("<<< Response: ERROR %d (0x%02X)", lastError, lastError);
-                Logger::Error("<<< Meaning: %s", GetModbusErrorDescription(lastError));
-                Logger::Error("└─────────────────────────────────────────────");
-                
+                // Write failed
                 if (lastError == 0xE0 || lastError == 224)
                 {
-                    Logger::Error("✗ TIMEOUT - No response received from wallbox");
-                    Logger::Error("  Possible causes:");
-                    Logger::Error("  • RS485 wiring incorrect (check A/B/GND)");
-                    Logger::Error("  • Wallbox not powered or not ready");
-                    Logger::Error("  • Wrong baud rate (wallbox ≠ %d)", Constants::HeidelbergWallbox::ModbusBaudrate);
-                    Logger::Error("  • Wrong server ID (wallbox ≠ %d)", Constants::HeidelbergWallbox::ModbusServerId);
-                    Logger::Error("  • A/B polarity reversed");
-                    Logger::Error("  • MOD-RS485 not seated properly in UEXT");
-                    Logger::Error("  • Cable too long or poor quality");
+                    Logger::Warning("ModbusRTU write attempt %d/%d: TIMEOUT (error 224/0xE0)", 
+                                  attemptNumber, 1 + Constants::ModbusRTU::NumWriteRetries);
                 }
                 else if (lastError >= 0x01 && lastError <= 0x08)
                 {
-                    Logger::Error("✗ MODBUS EXCEPTION - Wallbox rejected the request");
-                    Logger::Error("  The wallbox received the request but cannot fulfill it");
+                    Logger::Warning("ModbusRTU write attempt %d/%d: MODBUS EXCEPTION %d", 
+                                  attemptNumber, 1 + Constants::ModbusRTU::NumWriteRetries, lastError);
                 }
-                else if (lastError == 0xE2)
+                else
                 {
-                    Logger::Error("✗ CRC ERROR - Communication corruption detected");
-                    Logger::Error("  • Check for electrical noise on RS485 line");
-                    Logger::Error("  • Verify proper cable shielding");
-                    Logger::Error("  • Check termination resistors");
+                    Logger::Warning("ModbusRTU write attempt %d/%d: ERROR CODE %d (0x%02X)", 
+                                  attemptNumber, 1 + Constants::ModbusRTU::NumWriteRetries, lastError, lastError);
                 }
                 
                 if (numTries > 1)
                 {
-                    Logger::Warning("  ⟳ Retrying in %d ms...", Constants::ModbusRTU::RetryDelayMs);
-                    Logger::Info("");
                     delay(Constants::ModbusRTU::RetryDelayMs);
                 }
             }
@@ -433,14 +288,8 @@ bool ModbusRTU::WriteHoldRegister16(uint16_t address, uint16_t value)
     }
 
     // All write attempts failed
-    Logger::Error("═══════════════════════════════════════════════");
-    Logger::Error("✗ ModbusRTU WRITE FAILED");
-    Logger::Error("═══════════════════════════════════════════════");
-    Logger::Error("After %d attempts, all failed with error %d (0x%02X)", 
-                  attemptNumber, lastError, lastError);
-    Logger::Error("Error: %s", GetModbusErrorDescription(lastError));
-    Logger::Error("═══════════════════════════════════════════════");
-    Logger::Error("");
+    Logger::Error("ModbusRTU write FAILED after %d attempts: Error %d (0x%02X) - %s", 
+                  attemptNumber, lastError, lastError, GetModbusErrorDescription(lastError));
     
     gStatistics.NumModbusWriteErrors++;
     return false;
