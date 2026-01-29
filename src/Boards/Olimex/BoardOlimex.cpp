@@ -56,13 +56,18 @@
 //
 // ============================================================================
 // ============================================================================
-// CURRENT PIN CONFIGURATION: MOD-RS485 via UEXT
+// ⚠️⚠️⚠️ TEMPORARY/EXPERIMENTAL PIN CONFIGURATION ⚠️⚠️⚠️
+// ============================================================================
+// TESTING ALTERNATIVE PIN LAYOUT (as suggested by another AI)
 // ============================================================================
 //
 // Pin connections for MOD-RS485 module via UEXT connector:
-//   UEXT Pin 3 (TXD) -> GPIO 4  -> MOD-RS485 DI (Driver Input)
-//   UEXT Pin 4 (RXD) -> GPIO 36 -> MOD-RS485 RO (Receiver Output)
-//   UEXT Pin 9 (SCK) -> GPIO 14 -> MOD-RS485 DE (Driver Enable)
+//   UEXT Pin 3 (TXD) -> GPIO 16 -> MOD-RS485 DI (Driver Input) [CHANGED FROM GPIO 4]
+//   UEXT Pin 4 (RXD) -> GPIO 36 -> MOD-RS485 RO (Receiver Output) [UNCHANGED]
+//   UEXT Pin 6 (SDA) -> GPIO 13 -> MOD-RS485 DE/RE (Direction) [CHANGED FROM GPIO 14]
+//
+// ⚠️ IMPORTANT: This configuration requires #SS/SDA jumper in SDA position!
+// ⚠️ This is EXPERIMENTAL - testing alternative pin assignments!
 //
 // ⚠️ IMPORTANT: ESP32-POE vs ESP32-POE-ISO Pin Differences
 //
@@ -118,9 +123,11 @@
 //   See docs/MOD-RS485-Configuration.md for complete jumper information.
 //
 // ============================================================================
-constexpr uint8_t PinRX = GPIO_NUM_36;
-constexpr uint8_t PinTX = GPIO_NUM_4;
-constexpr uint8_t PinRTS = GPIO_NUM_14;  // Changed from GPIO 13 to work with default jumpers
+// ⚠️⚠️⚠️ TEMPORARY/EXPERIMENTAL CONFIGURATION ⚠️⚠️⚠️
+// Testing alternative pin layout as suggested by another source
+constexpr uint8_t PinRX = GPIO_NUM_36;    // UNCHANGED - Correct for ESP32-POE-ISO
+constexpr uint8_t PinTX = GPIO_NUM_16;    // CHANGED FROM GPIO 4 (EXPERIMENTAL!)
+constexpr uint8_t PinRTS = GPIO_NUM_13;   // CHANGED FROM GPIO 14 - Requires #SS/SDA jumper in SDA position
 
 // Constructor
 BoardOlimex::BoardOlimex()
