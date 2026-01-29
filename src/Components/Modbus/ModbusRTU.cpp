@@ -23,16 +23,17 @@ static bool gUseDualPin = false;
 
 // RTScallback function for automatic RS485 direction control
 // Called by ModbusClientRTU library when RTS state changes
-// pin: the pin number (not used, we use our own pin variables)
-// state: true = ACTIVE (transmit mode), false = INACTIVE (receive mode)
-void RS485RTSCallback(uint8_t pin, bool state)
+// RTScallback for eModbus library
+// level: true = HIGH (transmit mode), false = LOW (receive mode)
+// Per official docs: void func(bool level);
+void RS485RTSCallback(bool level)
 {
-    static bool previousState = false;
+    static bool previousLevel = false;
     static unsigned long transitionCount = 0;
     
     transitionCount++;
     
-    if (state == true)  // ACTIVE (transmit mode)
+    if (level == true)  // HIGH = transmit mode
     {
         // TRANSMIT MODE: Enable driver, disable receiver
         digitalWrite(gPinDE, HIGH);  // DE = HIGH (driver ON)
@@ -42,16 +43,16 @@ void RS485RTSCallback(uint8_t pin, bool state)
             digitalWrite(gPinRE, HIGH);  // /RE = HIGH (receiver OFF, because /RE is active LOW)
             Logger::Debug("[RS485 #%lu] %s → TRANSMIT (DE=HIGH, /RE=HIGH)", 
                          transitionCount,
-                         previousState == true ? "TRANSMIT" : "RECEIVE");
+                         previousLevel == true ? "TRANSMIT" : "RECEIVE");
         }
         else
         {
             Logger::Debug("[RS485 #%lu] %s → TRANSMIT (DE=HIGH)", 
                          transitionCount,
-                         previousState == true ? "TRANSMIT" : "RECEIVE");
+                         previousLevel == true ? "TRANSMIT" : "RECEIVE");
         }
     }
-    else  // INACTIVE (receive mode)
+    else  // LOW = receive mode
     {
         // RECEIVE MODE: Disable driver, enable receiver
         digitalWrite(gPinDE, LOW);   // DE = LOW (driver OFF)
@@ -61,17 +62,17 @@ void RS485RTSCallback(uint8_t pin, bool state)
             digitalWrite(gPinRE, LOW);   // /RE = LOW (receiver ON, because /RE is active LOW)
             Logger::Debug("[RS485 #%lu] %s → RECEIVE (DE=LOW, /RE=LOW)", 
                          transitionCount,
-                         previousState == true ? "TRANSMIT" : "RECEIVE");
+                         previousLevel == true ? "TRANSMIT" : "RECEIVE");
         }
         else
         {
             Logger::Debug("[RS485 #%lu] %s → RECEIVE (DE=LOW)", 
                          transitionCount,
-                         previousState == true ? "TRANSMIT" : "RECEIVE");
+                         previousLevel == true ? "TRANSMIT" : "RECEIVE");
         }
     }
     
-    previousState = state;
+    previousLevel = level;
 }
 
 // Helper functions for dual-pin RS485 control (kept for backwards compatibility but not used with callback)
