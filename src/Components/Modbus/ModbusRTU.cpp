@@ -339,14 +339,29 @@ bool ModbusRTU::WriteHoldRegister16(uint16_t address, uint16_t value)
     {
         attemptNumber++;
         
-        Logger::Info(">>> Attempt %d/%d: Sending request...", 
+        Logger::Info(">>> Attempt %d/%d: Preparing request...", 
                      attemptNumber, 1 + Constants::ModbusRTU::NumWriteRetries);
+        
+        // Log what we're about to send (BEFORE transmission)
+        Logger::Info(">>> TX FRAME: 01 06 %02X %02X %02X %02X [+CRC]", 
+                    (address >> 8) & 0xFF, address & 0xFF,
+                    (value >> 8) & 0xFF, value & 0xFF);
+        Logger::Debug("    Structure: [ServerID=0x01][FC=0x06][Addr=0x%04X][Value=0x%04X][CRC]", address, value);
         
         // Try to get the mutex
         if (xSemaphoreTake(gMutex, portMAX_DELAY))
         {
-            // RTScallback automatically handles mode switching
-            // Build and send the request
+            Logger::Debug(">>> Calling syncRequest()...");
+            Logger::Debug("    - RTScallback will switch to TRANSMIT mode");
+            Logger::Debug("    - Library will transmit frame bit-by-bit at %d baud", Constants::HeidelbergWallbox::ModbusBaudrate);
+            Logger::Debug("    - RTScallback will switch to RECEIVE mode");
+            Logger::Debug("    - Library will wait for and receive response");
+            
+            // RTScallback automatically handles mode switching:
+            // 1. Library calls RS485RTSCallback(true) → TRANSMIT mode
+            // 2. Library transmits the frame on RS485 bus
+            // 3. Library calls RS485RTSCallback(false) → RECEIVE mode  
+            // 4. Library waits for and receives response
             ModbusMessage response = gModbusRTU->syncRequest(
                 0,
                 Constants::HeidelbergWallbox::ModbusServerId,
@@ -354,14 +369,10 @@ bool ModbusRTU::WriteHoldRegister16(uint16_t address, uint16_t value)
                 address,
                 value);
 
+            Logger::Debug("<<< syncRequest() completed, processing response...");
+            
             // Free mutex
             xSemaphoreGive(gMutex);
-
-            // Log the request frame (reconstructed for display)
-            Logger::Info(">>> TX BYTES: 01 06 %02X %02X %02X %02X [+CRC]", 
-                        (address >> 8) & 0xFF, address & 0xFF,
-                        (value >> 8) & 0xFF, value & 0xFF);
-            Logger::Info("    Frame: [ServerID=0x01][FC=0x06][Addr][Value][CRC]");
 
             lastError = response.getError();
             
