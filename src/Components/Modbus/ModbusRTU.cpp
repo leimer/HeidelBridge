@@ -120,9 +120,9 @@ void ModbusRTU::Init()
     }
     else
     {
-        // Single-pin boards (e.g., ESP32, Lilygo): Let library handle RTS pin directly
-        uint8_t pinRts = BoardFactory::Instance()->GetBoard()->GetPinRts();
-        gModbusRTU = new ModbusClientRTU(pinRts);
+        // Single-pin boards (e.g., ESP32, Lilygo): Let library handle DE pin directly
+        uint8_t pinDE = BoardFactory::Instance()->GetBoard()->GetPinDE();
+        gModbusRTU = new ModbusClientRTU(pinDE);
     }
     
     // Start Modbus RTU
