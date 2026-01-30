@@ -21,28 +21,6 @@ SemaphoreHandle_t gMutex = nullptr;                                            /
 static uint8_t gPinDE = 0;
 static uint8_t gPinRE = 0;
 
-// Helper function to format Modbus message as hex string
-String FormatModbusMessageHex(ModbusMessage &msg)
-{
-    String hexStr = "";
-    uint16_t len = msg.size();
-    
-    if (len == 0)
-    {
-        return "[EMPTY - NO RESPONSE/TIMEOUT]";
-    }
-    
-    const uint8_t *data = msg.data();
-    for (uint16_t i = 0; i < len; i++)
-    {
-        if (i > 0) hexStr += " ";
-        char buf[3];
-        sprintf(buf, "%02X", data[i]);
-        hexStr += buf;
-    }
-    return hexStr;
-}
-
 // Helper function to explain Modbus error codes
 const char* GetModbusErrorDescription(uint8_t errorCode)
 {
@@ -172,27 +150,11 @@ bool ModbusRTU::ReadRegisters(uint16_t startAddress, uint8_t numValues, uint8_t 
             }
             else
             {
-                // Read failed
-                if (lastError == 0xE0 || lastError == 224)
-                {
-                    Logger::Warning("ModbusRTU read attempt %d/%d: TIMEOUT (error 224/0xE0)", 
-                                  attemptNumber, 1 + Constants::ModbusRTU::NumReadRetries);
-                }
-                else if (lastError >= 0x01 && lastError <= 0x08)
-                {
-                    Logger::Warning("ModbusRTU read attempt %d/%d: MODBUS EXCEPTION %d", 
-                                  attemptNumber, 1 + Constants::ModbusRTU::NumReadRetries, lastError);
-                }
-                else
-                {
-                    Logger::Warning("ModbusRTU read attempt %d/%d: ERROR CODE %d (0x%02X)", 
-                                  attemptNumber, 1 + Constants::ModbusRTU::NumReadRetries, lastError, lastError);
-                }
-                
-                if (numTries > 1)
-                {
-                    delay(Constants::ModbusRTU::RetryDelayMs);
-                }
+                // Read failed - log error and delay before retry
+                Logger::Warning("ModbusRTU read attempt %d/%d: Error %d (0x%02X) - %s", 
+                              attemptNumber, 1 + Constants::ModbusRTU::NumReadRetries, 
+                              lastError, lastError, GetModbusErrorDescription(lastError));
+                delay(Constants::ModbusRTU::RetryDelayMs);
             }
         }
 
@@ -200,13 +162,8 @@ bool ModbusRTU::ReadRegisters(uint16_t startAddress, uint8_t numValues, uint8_t 
     }
 
     // All read attempts failed
-    Logger::Error("ModbusRTU read FAILED after %d attempts: Error %d (0x%02X)", 
-                  attemptNumber, lastError, lastError);
-    
-    if (lastError == 0xE0 || lastError == 224)
-    {
-        Logger::Error("TIMEOUT ERROR - Check RS485 wiring and wallbox configuration");
-    }
+    Logger::Error("ModbusRTU read FAILED after %d attempts: Error %d (0x%02X) - %s", 
+                  attemptNumber, lastError, lastError, GetModbusErrorDescription(lastError));
     
     gStatistics.NumModbusReadErrors++;
     for (uint8_t wordIndex = 0; wordIndex < numValues; ++wordIndex)
@@ -253,27 +210,11 @@ bool ModbusRTU::WriteHoldRegister16(uint16_t address, uint16_t value)
             }
             else
             {
-                // Write failed
-                if (lastError == 0xE0 || lastError == 224)
-                {
-                    Logger::Warning("ModbusRTU write attempt %d/%d: TIMEOUT (error 224/0xE0)", 
-                                  attemptNumber, 1 + Constants::ModbusRTU::NumWriteRetries);
-                }
-                else if (lastError >= 0x01 && lastError <= 0x08)
-                {
-                    Logger::Warning("ModbusRTU write attempt %d/%d: MODBUS EXCEPTION %d", 
-                                  attemptNumber, 1 + Constants::ModbusRTU::NumWriteRetries, lastError);
-                }
-                else
-                {
-                    Logger::Warning("ModbusRTU write attempt %d/%d: ERROR CODE %d (0x%02X)", 
-                                  attemptNumber, 1 + Constants::ModbusRTU::NumWriteRetries, lastError, lastError);
-                }
-                
-                if (numTries > 1)
-                {
-                    delay(Constants::ModbusRTU::RetryDelayMs);
-                }
+                // Write failed - log error and delay before retry
+                Logger::Warning("ModbusRTU write attempt %d/%d: Error %d (0x%02X) - %s", 
+                              attemptNumber, 1 + Constants::ModbusRTU::NumWriteRetries, 
+                              lastError, lastError, GetModbusErrorDescription(lastError));
+                delay(Constants::ModbusRTU::RetryDelayMs);
             }
         }
 

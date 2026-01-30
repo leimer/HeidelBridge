@@ -46,37 +46,20 @@ namespace EthernetConnection
         }
     }
 
-    // Initializes ethernet with DHCP or static IP
-    void Init()
+    // Initialize Ethernet PHY using board-defined configuration
+    static void InitializePHY()
     {
-        Logger::Info("Initializing Ethernet...");
-        
-        // Register Ethernet event handler
-        // Note: WiFi.onEvent() is used for both WiFi and Ethernet events in ESP32
-        WiFi.onEvent(EthernetEventHandler);
-
-        // For Olimex ESP32-POE-ISO with ETH8720 chip (LAN8720 compatible)
-        //
-        // Using ETH.begin() without parameters to use board-defined pin configuration.
-        // The esp32-poe-iso board definition in PlatformIO includes all required settings:
-        // - PHY_ADDR = 0 (PHY address on MDIO bus)
-        // - PHY_MDC = 23 (Management Data Clock)
-        // - PHY_MDIO = 18 (Management Data I/O)
-        // - PHY_TYPE = ETH_PHY_LAN8720 (ETH8720 is LAN8720 compatible)
-        // - CLK_MODE = ETH_CLOCK_GPIO0_IN (50MHz clock from external oscillator on GPIO0)
-        // - PHY_POWER = -1 (No GPIO control, reset handled internally)
-        //
-        // This matches the official Olimex Arduino example which uses ETH.begin() with no
-        // parameters. Avoids bootstrap pin conflicts and timing issues with manual config.
-        //
-        // Note: PoE power is managed by Si3402-B chip, independent of PHY initialization.
         Logger::Debug("Starting ETH PHY with board-defined configuration...");
         ETH.begin();
+    }
 
-        // Wait for link to come up
+    // Wait for Ethernet link to establish
+    static bool WaitForLink()
+    {
         Logger::Debug("Waiting for Ethernet link...");
         uint32_t linkWaitStart = millis();
-        const uint32_t linkTimeout = 5000; // 5 seconds for link
+        const uint32_t linkTimeout = 5000;
+        
         while (!ETH.linkUp() && (millis() - linkWaitStart < linkTimeout))
         {
             delay(100);
@@ -85,79 +68,118 @@ namespace EthernetConnection
         if (!ETH.linkUp())
         {
             Logger::Warning("Ethernet link not established (check cable connection)");
-            return;
+            return false;
         }
         
         Logger::Info("Ethernet link UP");
+        return true;
+    }
 
-        if (!Settings::Instance()->IsEthernetDhcpEnabled)
+    // Configure static IP address
+    static bool ConfigureStaticIP()
+    {
+        Logger::Info("Configuring Ethernet with static IP: %s", Settings::Instance()->EthernetStaticIp.c_str());
+        Logger::Info("Gateway: %s, Subnet: %s, DNS: %s", 
+            Settings::Instance()->EthernetGateway.c_str(),
+            Settings::Instance()->EthernetSubnet.c_str(),
+            Settings::Instance()->EthernetDns.c_str());
+        
+        IPAddress localIP, gateway, subnet, dns;
+        localIP.fromString(Settings::Instance()->EthernetStaticIp);
+        gateway.fromString(Settings::Instance()->EthernetGateway);
+        subnet.fromString(Settings::Instance()->EthernetSubnet);
+        dns.fromString(Settings::Instance()->EthernetDns);
+
+        if (ETH.config(localIP, gateway, subnet, dns))
         {
-            // Use static IP configuration
-            Logger::Info("Configuring Ethernet with static IP: %s", Settings::Instance()->EthernetStaticIp.c_str());
-            Logger::Info("Gateway: %s, Subnet: %s, DNS: %s", 
-                Settings::Instance()->EthernetGateway.c_str(),
-                Settings::Instance()->EthernetSubnet.c_str(),
-                Settings::Instance()->EthernetDns.c_str());
-            
-            IPAddress localIP, gateway, subnet, dns;
-            localIP.fromString(Settings::Instance()->EthernetStaticIp);
-            gateway.fromString(Settings::Instance()->EthernetGateway);
-            subnet.fromString(Settings::Instance()->EthernetSubnet);
-            dns.fromString(Settings::Instance()->EthernetDns);
-
-            if (ETH.config(localIP, gateway, subnet, dns))
-            {
-                gEthernetConnected = true;
-                Logger::Info("Static IP configuration successful");
-                Logger::Info("ETH IPv4: %s", ETH.localIP().toString().c_str());
-                Logger::Info("ETH Gateway: %s", ETH.gatewayIP().toString().c_str());
-                Logger::Info("ETH Subnet: %s", ETH.subnetMask().toString().c_str());
-            }
-            else
-            {
-                Logger::Error("Failed to configure static IP");
-            }
+            gEthernetConnected = true;
+            Logger::Info("Static IP configuration successful");
+            Logger::Info("ETH IPv4: %s", ETH.localIP().toString().c_str());
+            Logger::Info("ETH Gateway: %s", ETH.gatewayIP().toString().c_str());
+            Logger::Info("ETH Subnet: %s", ETH.subnetMask().toString().c_str());
+            return true;
         }
         else
         {
-            // Use DHCP
-            Logger::Info("Initializing Ethernet with DHCP");
-            
-            // Wait for DHCP to assign an IP (with timeout)
-            uint32_t startTime = millis();
-            const uint32_t dhcpTimeout = 10000; // 10 seconds timeout for DHCP
-            
-            while (!gEthernetConnected && (millis() - startTime < dhcpTimeout))
-            {
-                delay(100);
-            }
+            Logger::Error("Failed to configure static IP");
+            return false;
+        }
+    }
 
-            // If DHCP failed, configure APIPA address (169.254.x.x)
-            if (!gEthernetConnected)
+    // Configure APIPA (Auto Private IP Addressing) fallback
+    static bool ConfigureAPIPAFallback()
+    {
+        Logger::Warning("DHCP failed, using APIPA address");
+        gDhcpFailed = true;
+        
+        // Generate APIPA address in range 169.254.1.0 - 169.254.254.255
+        uint8_t mac[6];
+        ETH.macAddress(mac);
+        IPAddress apipaIP(169, 254, mac[4], mac[5]);
+        IPAddress gateway(169, 254, 0, 1);
+        IPAddress subnet(255, 255, 0, 0);
+        
+        Logger::Info("Configuring APIPA IP: %s", apipaIP.toString().c_str());
+        
+        if (ETH.config(apipaIP, gateway, subnet))
+        {
+            gEthernetConnected = true;
+            Logger::Info("APIPA configuration successful");
+            Logger::Info("ETH IPv4: %s", ETH.localIP().toString().c_str());
+            return true;
+        }
+        else
+        {
+            Logger::Error("Failed to configure APIPA address");
+            return false;
+        }
+    }
+
+    // Try to obtain IP via DHCP
+    static bool TryDHCP()
+    {
+        Logger::Info("Initializing Ethernet with DHCP");
+        
+        uint32_t startTime = millis();
+        const uint32_t dhcpTimeout = 10000;
+        
+        while (!gEthernetConnected && (millis() - startTime < dhcpTimeout))
+        {
+            delay(100);
+        }
+
+        return gEthernetConnected;
+    }
+
+    // Initializes ethernet with DHCP or static IP
+    void Init()
+    {
+        Logger::Info("Initializing Ethernet...");
+        
+        // Register event handler
+        WiFi.onEvent(EthernetEventHandler);
+
+        // Initialize PHY
+        InitializePHY();
+
+        // Wait for link
+        if (!WaitForLink())
+        {
+            return;
+        }
+
+        // Configure IP address
+        if (!Settings::Instance()->IsEthernetDhcpEnabled)
+        {
+            // Static IP
+            ConfigureStaticIP();
+        }
+        else
+        {
+            // DHCP with APIPA fallback
+            if (!TryDHCP())
             {
-                Logger::Warning("DHCP failed, using APIPA address");
-                gDhcpFailed = true;
-                
-                // Generate APIPA address in range 169.254.1.0 - 169.254.254.255
-                // Use last two octets of MAC address for uniqueness
-                uint8_t mac[6];
-                ETH.macAddress(mac);
-                IPAddress apipaIP(169, 254, mac[4], mac[5]);
-                IPAddress gateway(169, 254, 0, 1);
-                IPAddress subnet(255, 255, 0, 0);
-                
-                Logger::Info("Configuring APIPA IP: %s", apipaIP.toString().c_str());
-                
-                if (ETH.config(apipaIP, gateway, subnet))
-                {
-                    gEthernetConnected = true;
-                    Logger::Info("APIPA configuration successful");
-                    Logger::Info("ETH IPv4: %s", ETH.localIP().toString().c_str());
-                }
-                else
-                {
-                    Logger::Error("Failed to configure APIPA address");
-                }
+                ConfigureAPIPAFallback();
             }
         }
     }
