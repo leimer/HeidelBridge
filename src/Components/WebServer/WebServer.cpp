@@ -7,7 +7,7 @@
 #include "../../Configuration/Constants.h"
 #include "../../Configuration/Settings.h"
 #include "../../Configuration/Version.h"
-#include "NetworkScanner.h"
+#include "../WiFi/NetworkScanner.h"
 #include "../../Utils/StaticFile.h"
 #include "../Logger/Logger.h"
 #include "WebServer.h"
@@ -192,6 +192,11 @@ String WebServer::HandleApiRequestSettingsRead(AsyncWebServerRequest *request)
     doc["device-name"] = Settings::Instance()->DeviceName;
     doc["wifi-ssid"] = Settings::Instance()->WifiSsid;
     doc["wifi-password"] = Settings::Instance()->WifiPassword;
+    doc["ethernet-dhcp-enabled"] = Settings::Instance()->IsEthernetDhcpEnabled;
+    doc["ethernet-static-ip"] = Settings::Instance()->EthernetStaticIp;
+    doc["ethernet-gateway"] = Settings::Instance()->EthernetGateway;
+    doc["ethernet-subnet"] = Settings::Instance()->EthernetSubnet;
+    doc["ethernet-dns"] = Settings::Instance()->EthernetDns;
     doc["mqtt-enabled"] = Settings::Instance()->IsMqttEnabled;
     doc["mqtt-server"] = Settings::Instance()->MqttServer;
     doc["mqtt-port"] = Settings::Instance()->MqttPort;
@@ -228,6 +233,26 @@ String WebServer::HandleApiRequestSettingsWrite(AsyncWebServerRequest *request, 
     if (doc["wifi-password"].is<String>())
     {
         Settings::Instance()->WifiPassword = doc["wifi-password"].as<String>();
+    }
+    if (doc["ethernet-dhcp-enabled"].is<bool>())
+    {
+        Settings::Instance()->IsEthernetDhcpEnabled = doc["ethernet-dhcp-enabled"].as<bool>();
+    }
+    if (doc["ethernet-static-ip"].is<String>())
+    {
+        Settings::Instance()->EthernetStaticIp = doc["ethernet-static-ip"].as<String>();
+    }
+    if (doc["ethernet-gateway"].is<String>())
+    {
+        Settings::Instance()->EthernetGateway = doc["ethernet-gateway"].as<String>();
+    }
+    if (doc["ethernet-subnet"].is<String>())
+    {
+        Settings::Instance()->EthernetSubnet = doc["ethernet-subnet"].as<String>();
+    }
+    if (doc["ethernet-dns"].is<String>())
+    {
+        Settings::Instance()->EthernetDns = doc["ethernet-dns"].as<String>();
     }
     if (doc["mqtt-enabled"].is<bool>())
     {

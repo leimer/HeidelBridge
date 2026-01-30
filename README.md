@@ -32,7 +32,7 @@ Parts list:
 This should be enough for quickly putting together a fully functioning prototype.
 Of course a well designed PCB would be much nicer, but this is still work in progress. Once the design is ready, the schematics will be available *right here*.
 
-> *\* This project supports the classic ESP32. It has not been built/tested for newer models, like the S2 and C6. Additionally the LILYGO T-CAN485 board is supported, which already includes an on-board RS485 transceiver.*
+> *\* This project supports the classic ESP32 with ESP32-WROOM-32 variants (32D, 32E, 32UE). It has not been built/tested for newer models, like the S2 and C6. Additionally the LILYGO T-CAN485 board and **Olimex ESP32-POE-ISO** (with ESP32-WROOM-32E) are supported, which include on-board RS485 transceivers. The Olimex board also provides PoE (Power over Ethernet) and Ethernet connectivity.*
 
 # Getting Started
 
@@ -42,7 +42,9 @@ To get your very own HeidelBridge up and running follow these guides:
 
 # Keeping Your HeidelBridge Up-To-Date
 
-Heidelbridge supports OTA (Over The Air) updates. That means that you can update the device firmware via WiFi without physical access to the device. This process is described here: [updating your HeidelBridge](/docs/SoftwareSetup.md#updating-your-heidelbridge).
+HeidelBridge supports OTA (Over The Air) updates. That means that you can update the device firmware via WiFi or Ethernet (for ESP32-POE-ISO) without physical access to the device. This process is described here: [updating your HeidelBridge](/docs/SoftwareSetup.md#updating-your-heidelbridge).
+
+For ESP32-POE-ISO users with Ethernet connectivity, see also: [OTA Updates over Ethernet](/docs/OTA-Ethernet.md).
 
 # Using HeidelBridge With evcc
 
@@ -75,6 +77,21 @@ The following web endpoints are currently served by HeidelBridge:
 # Contribution
 
 :heart: Help is welcome! Do you own a Heidelberg Energy Control wallbox? Are you a Modbus expert? Do you have ideas for improvements? Did you find a bug? Feel free to review the code, create pull requests, open issues or contact me directly.
+
+## For Developers
+
+### Building the Firmware
+
+Simply run:
+```bash
+platformio run -e esp32-poe-iso    # For ESP32-POE-ISO
+platformio run -e esp32     # For standard ESP32
+platformio run -e lilygo    # For LILYGO T-CAN485
+```
+
+The `build-resources.sh` script is **only needed when modifying web interface files** (HTML, CSS, JS) in the `data/` directory. For normal builds, the generated header files are already included in the repository.
+
+For detailed build process documentation, see [docs/BuildProcess.md](docs/BuildProcess.md).
 
 
 # Used Assets and Libraries

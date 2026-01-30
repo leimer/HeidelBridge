@@ -38,7 +38,7 @@ If you want to change the configuration of your HeidelBridge, you can open the w
 
 To update the firmware on your HeidelBridge, download the latest firmware binary from the [GitHub releases](https://github.com/BorisBrock/HeidelBridge/releases).
 
-Now open the update web interface of your heidelbridge in a web browser: `{ip}/update` (where {ip} is the IP address of your HeidelBridge).
+Now open the update interface of your HeidelBridge in a web browser: `{ip}/update` (where {ip} is the IP address of your HeidelBridge).
 
 Here you can upload the firmware binary and start the update.
 
@@ -52,11 +52,9 @@ Then follow these steps:
 
 - Start by cloning or downloading this repository.
 - Optional: change `board = ...` in platformio.ini to match the ESP32 board you are actually using.
-- Compile the project.
-- Build the file system image via the PlatformIO command palette.
+- Compile the project with `platformio run -e <environment>` (see build environments below).
 - Now connect your ESP32 via USB.
-- Upload the file system image.
-- Upload the firmware.
+- Upload the firmware with `platformio run -e <environment> -t upload`.
 
 ## Build Environments
 
@@ -102,6 +100,38 @@ pio run -e lilygo
 - **No external MAX485 module needed** - RS485 transceiver is built into the board
 
 For detailed wiring information and hardware setup for the LilyGo T-Can485 board, please refer to the [discussion thread](https://github.com/BorisBrock/HeidelBridge/discussions/4).
+
+### Olimex ESP32-POE-ISO + MOD-RS485 (`esp32-poe-iso`)
+
+This build environment is designed for the Olimex ESP32-POE-ISO board with the MOD-RS485 module connected via the UEXT connector. This configuration provides both Ethernet connectivity with Power over Ethernet (PoE) and RS485 communication.
+
+**To compile:**
+
+```bash
+pio run -e esp32-poe-iso
+```
+
+**Pin configuration:**
+
+- GPIO4 → MOD-RS485 DI (Driver Input)
+- GPIO36 → MOD-RS485 RO (Receiver Output)
+- GPIO14 → MOD-RS485 DE (Driver Enable)
+- GPIO5 → MOD-RS485 /RE (Receiver Enable, active LOW)
+
+**Hardware setup:**
+
+- Connect MOD-RS485 module to UEXT connector
+- Use default MOD-RS485 jumper positions (no modifications needed)
+- Connect RS485 A/B wires to wallbox
+
+**Features:**
+
+- **Ethernet + PoE:** Native Ethernet connectivity with Power over Ethernet support
+- **Dual-pin RS485 control:** Explicit transmit/receive mode switching for reliable communication
+- **OTA updates:** Supports firmware updates over both WiFi and Ethernet
+- **No external MAX485 needed:** MOD-RS485 module provides complete RS485 interface
+
+The ESP32-POE-ISO can be powered via USB or PoE, making it ideal for installations where power outlets are not easily accessible.
 
 ### Dummy Wallbox (`dummy`)
 

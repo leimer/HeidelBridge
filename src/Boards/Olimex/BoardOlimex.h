@@ -1,10 +1,10 @@
 #pragma once
 
-class BoardLilygo : public Board
+class BoardOlimex : public Board
 {
 public:
   // Constructor
-  BoardLilygo();
+  BoardOlimex();
 
   // Initializes the board
   virtual void Init();

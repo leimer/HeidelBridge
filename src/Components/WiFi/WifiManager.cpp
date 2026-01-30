@@ -2,10 +2,13 @@
 #include <ArduinoJson.h>
 #include "../../Configuration/Constants.h"
 #include "../../Configuration/Settings.h"
+#include "../../Boards/BoardFactory.h"
+#include "../../Boards/Board.h"
 #include "../Logger/Logger.h"
 #include "WifiConnection.h"
+#include "../Ethernet/EthernetConnection.h"
 #include "CaptivePortal.h"
-#include "WebServer.h"
+#include "../WebServer/WebServer.h"
 #include "WifiManager.h"
 
 WifiManager *WifiManager::Instance()
@@ -16,7 +19,27 @@ WifiManager *WifiManager::Instance()
 
 void WifiManager::Start()
 {
-    Logger::Info("Starting WiFi manager");
+    Logger::Info("Starting network manager");
+
+    // Try Ethernet first if the board supports it
+    if (BoardFactory::Instance()->GetBoard()->HasEthernet())
+    {
+        Logger::Debug("Board supports Ethernet, attempting connection...");
+        EthernetConnection::Init();
+        
+        // Wait for ethernet connection with timeout
+        if (EthernetConnection::WaitForConnection(15))
+        {
+            Logger::Info("Ethernet connection established at %s", EthernetConnection::GetLocalIP().c_str());
+            // Start the web server without captive portal
+            WebServer::Instance()->Init();
+            return;
+        }
+        else
+        {
+            Logger::Warning("Ethernet connection failed after 15 seconds, falling back to WiFi");
+        }
+    }
 
     // Check if WiFi credentials are available and try to connect
     bool isConnectedToWifi = false;
@@ -71,6 +94,13 @@ bool WifiManager::ConnectToWifiNetwork()
 // Cyclic processing
 void WifiManager::Update()
 {
+    // If using ethernet, no need for captive portal timeout
+    if (BoardFactory::Instance()->GetBoard()->HasEthernet() && 
+        EthernetConnection::IsConnected())
+    {
+        return;
+    }
+
     CaptivePortal::Update();
 
     // If the captive portal has been running for a while without any activity, restart the ESP32
