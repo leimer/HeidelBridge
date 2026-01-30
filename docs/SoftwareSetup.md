@@ -105,6 +105,38 @@ pio run -e lilygo
 
 For detailed wiring information and hardware setup for the LilyGo T-Can485 board, please refer to the [discussion thread](https://github.com/BorisBrock/HeidelBridge/discussions/4).
 
+### Olimex ESP32-POE-ISO + MOD-RS485 (`olimex`)
+
+This build environment is designed for the Olimex ESP32-POE-ISO board with the MOD-RS485 module connected via the UEXT connector. This configuration provides both Ethernet connectivity with Power over Ethernet (PoE) and RS485 communication.
+
+**To compile:**
+
+```bash
+pio run -e olimex
+```
+
+**Pin configuration:**
+
+- GPIO4 → MOD-RS485 DI (Driver Input)
+- GPIO36 → MOD-RS485 RO (Receiver Output)
+- GPIO14 → MOD-RS485 DE (Driver Enable)
+- GPIO5 → MOD-RS485 /RE (Receiver Enable, active LOW)
+
+**Hardware setup:**
+
+- Connect MOD-RS485 module to UEXT connector
+- Use default MOD-RS485 jumper positions (no modifications needed)
+- Connect RS485 A/B wires to wallbox
+
+**Features:**
+
+- **Ethernet + PoE:** Native Ethernet connectivity with Power over Ethernet support
+- **Dual-pin RS485 control:** Explicit transmit/receive mode switching for reliable communication
+- **OTA updates:** Supports firmware updates over both WiFi and Ethernet
+- **No external MAX485 needed:** MOD-RS485 module provides complete RS485 interface
+
+The ESP32-POE-ISO can be powered via USB or PoE, making it ideal for installations where power outlets are not easily accessible.
+
 ### Dummy Wallbox (`dummy`)
 
 This build environment creates a simulation mode for testing without actual wallbox hardware.
