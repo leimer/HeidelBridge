@@ -183,6 +183,20 @@ namespace EthernetConnection
             }
         }
     }
+    
+    // Waits for ethernet connection with timeout
+    bool WaitForConnection(int timeoutSeconds)
+    {
+        Logger::Debug("Waiting for Ethernet connection (timeout: %d seconds)...", timeoutSeconds);
+        
+        uint32_t startTimeMs = millis();
+        while (!gEthernetConnected && (millis() - startTimeMs < timeoutSeconds * 1000))
+        {
+            delay(100);
+        }
+        
+        return gEthernetConnected;
+    }
 
     // Checks if the device is connected to ethernet
     bool IsConnected()

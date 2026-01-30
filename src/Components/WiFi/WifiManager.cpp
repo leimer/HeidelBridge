@@ -27,14 +27,8 @@ void WifiManager::Start()
         Logger::Debug("Board supports Ethernet, attempting connection...");
         EthernetConnection::Init();
         
-        // Wait for ethernet to connect (increased timeout for link + IP)
-        uint32_t startTimeMs = millis();
-        while (!EthernetConnection::IsConnected() && (millis() - startTimeMs < 15000))
-        {
-            delay(100);
-        }
-        
-        if (EthernetConnection::IsConnected())
+        // Wait for ethernet connection with timeout
+        if (EthernetConnection::WaitForConnection(15))
         {
             Logger::Info("Ethernet connection established at %s", EthernetConnection::GetLocalIP().c_str());
             // Start the web server without captive portal

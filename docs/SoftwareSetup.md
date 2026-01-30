@@ -101,14 +101,14 @@ pio run -e lilygo
 
 For detailed wiring information and hardware setup for the LilyGo T-Can485 board, please refer to the [discussion thread](https://github.com/BorisBrock/HeidelBridge/discussions/4).
 
-### Olimex ESP32-POE-ISO + MOD-RS485 (`olimex`)
+### Olimex ESP32-POE-ISO + MOD-RS485 (`esp32-poe-iso`)
 
 This build environment is designed for the Olimex ESP32-POE-ISO board with the MOD-RS485 module connected via the UEXT connector. This configuration provides both Ethernet connectivity with Power over Ethernet (PoE) and RS485 communication.
 
 **To compile:**
 
 ```bash
-pio run -e olimex
+pio run -e esp32-poe-iso
 ```
 
 **Pin configuration:**

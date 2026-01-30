@@ -84,7 +84,7 @@ The following web endpoints are currently served by HeidelBridge:
 
 Simply run:
 ```bash
-platformio run -e olimex    # For ESP32-POE-ISO
+platformio run -e esp32-poe-iso    # For ESP32-POE-ISO
 platformio run -e esp32     # For standard ESP32
 platformio run -e lilygo    # For LILYGO T-CAN485
 ```
