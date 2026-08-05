@@ -237,7 +237,7 @@ namespace MQTTManager
         PublishHomeAssistantDiscoveryTopic(
             "homeassistant/switch/%/control_enable_charging/config",
             R"({
-                "name":"Enable Charging",
+                "name":"Enable charging",
                 "state_topic":"%/enable_charging",
                 "command_topic":"%/control/enable_charging",
                 "availability_topic":"%/status",
@@ -250,7 +250,7 @@ namespace MQTTManager
         PublishHomeAssistantDiscoveryTopic(
             "homeassistant/switch/%/control_standby/config",
             R"({
-                "name":"Standby Mode",
+                "name":"Standby mode",
                 "state_topic":"%/standby_enabled",
                 "command_topic":"%/control/standby",
                 "availability_topic":"%/status",
@@ -263,7 +263,7 @@ namespace MQTTManager
         PublishHomeAssistantDiscoveryTopic(
             "homeassistant/number/%/control_charging_current_limit/config",
             R"({
-                "name":"Charging Current Limit",
+                "name":"Charging current limit",
                 "command_topic":"%/control/charging_current_limit",
                 "state_topic":"%/charging_current_limit",
                 "availability_topic":"%/status",
