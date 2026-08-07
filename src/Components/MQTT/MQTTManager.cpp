@@ -309,7 +309,8 @@ namespace MQTTManager
             case (MqttPublishedValues::ChargingCurrentLimit):
             {
                 float chargingCurrentLimit = gWallbox->GetChargingCurrentLimit();
-                if (chargingCurrentLimit >= 6.0f && chargingCurrentLimit <= 16.0f) // Only publish valid current limits
+                // 0 A is a valid reading (charging blocked/disabled), not just 6-16 A. Only reject out-of-range garbage.
+                if (chargingCurrentLimit == 0.0f || (chargingCurrentLimit >= 6.0f && chargingCurrentLimit <= 16.0f))
                 {
                     gMqttClient.publish(gMqttTopic.SetString("/charging_current_limit"), 0, false, String(chargingCurrentLimit).c_str());
                 }
@@ -351,6 +352,7 @@ namespace MQTTManager
                 gMqttClient.publish(gMqttTopic.SetString("/internal/mqtt_disconnects"), 0, false, String(gStatistics.NumMqttDisconnects).c_str());
                 gMqttClient.publish(gMqttTopic.SetString("/internal/modbus_read_errors"), 0, false, String(gStatistics.NumModbusReadErrors).c_str());
                 gMqttClient.publish(gMqttTopic.SetString("/internal/modbus_write_errors"), 0, false, String(gStatistics.NumModbusWriteErrors).c_str());
+                gMqttClient.publish(gMqttTopic.SetString("/internal/wifi_rssi"), 0, false, String(WiFi.RSSI()).c_str());
                 break;
 
             case (MqttPublishedValues::Discovery):
