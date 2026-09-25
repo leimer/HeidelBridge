@@ -79,13 +79,17 @@ void WebServer::Init()
 
     // Handle API requests
     gWebServer.on("/api/version", HTTP_GET, [this](AsyncWebServerRequest *request)
-                  { request->send(200, "application/json", HandleApiRequestGetVersion()); });
+                  { mHadActivity = true;
+                    request->send(200, "application/json", HandleApiRequestGetVersion()); });
     gWebServer.on("/api/wifi_scan_start", HTTP_POST, [this](AsyncWebServerRequest *request)
-                  { request->send(200, "application/json", HandleApiRequestStartWifiScan()); });
+                  { mHadActivity = true;
+                    request->send(200, "application/json", HandleApiRequestStartWifiScan()); });
     gWebServer.on("/api/wifi_scan_status", HTTP_GET, [this](AsyncWebServerRequest *request)
-                  { request->send(200, "application/json", HandleApiRequestGetWifiScanStatus()); });
+                  { mHadActivity = true;
+                    request->send(200, "application/json", HandleApiRequestGetWifiScanStatus()); });
     gWebServer.on("/api/settings_read", HTTP_GET, [this](AsyncWebServerRequest *request)
-                  { request->send(200, "application/json", HandleApiRequestSettingsRead(request)); });
+                  { mHadActivity = true;
+                    request->send(200, "application/json", HandleApiRequestSettingsRead(request)); });
     gWebServer.on(
         "/api/settings_write", HTTP_POST,
         [](AsyncWebServerRequest *request) {},
@@ -96,6 +100,7 @@ void WebServer::Init()
             {
                 auto *payload = new String();
                 payload->reserve(total);
+                // ESPAsyncWebServer releases _tempObject if the request ends before the final chunk arrives.
                 request->_tempObject = payload;
             }
 
@@ -104,12 +109,16 @@ void WebServer::Init()
 
             if (index + len == total)
             {
+                mHadActivity = true;
                 request->send(200, "application/json", HandleApiRequestSettingsWrite(request, *payload));
+                delete payload;
+                request->_tempObject = nullptr;
             }
         });
 
     gWebServer.on("/api/reboot", HTTP_POST, [this](AsyncWebServerRequest *request)
-                  { request->send(200, "application/json", HandleApiRequestReboot()); });
+                  { mHadActivity = true;
+                    request->send(200, "application/json", HandleApiRequestReboot()); });
     gWebServer.on(
         "/api/update", HTTP_POST,
         [this](AsyncWebServerRequest *request)

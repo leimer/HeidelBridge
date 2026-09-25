@@ -74,10 +74,13 @@ void Settings::Print()
     Logger::Debug(" > Device name: %s", DeviceName.c_str());
     Logger::Debug(" > WiFi SSID: %s", WifiSsid.c_str());
     Logger::Debug(" > Ethernet DHCP: %s", IsEthernetDhcpEnabled ? "enabled" : "disabled");
-    Logger::Debug(" > Ethernet Static IP: %s", EthernetStaticIp.c_str());
-    Logger::Debug(" > Ethernet Gateway: %s", EthernetGateway.c_str());
-    Logger::Debug(" > Ethernet Subnet: %s", EthernetSubnet.c_str());
-    Logger::Debug(" > Ethernet DNS: %s", EthernetDns.c_str());
+    if (!IsEthernetDhcpEnabled)
+    {
+        Logger::Debug(" > Ethernet Static IP: %s", EthernetStaticIp.c_str());
+        Logger::Debug(" > Ethernet Gateway: %s", EthernetGateway.c_str());
+        Logger::Debug(" > Ethernet Subnet: %s", EthernetSubnet.c_str());
+        Logger::Debug(" > Ethernet DNS: %s", EthernetDns.c_str());
+    }
     Logger::Debug(" > MQTT enabled: %s", IsMqttEnabled ? "yes" : "no");
     Logger::Debug(" > MQTT server: %s", MqttServer.c_str());
     Logger::Debug(" > MQTT port: %d", MqttPort);
