@@ -105,7 +105,7 @@ void WebServer::Init()
             }
 
             auto *payload = static_cast<String *>(request->_tempObject);
-            payload->concat(reinterpret_cast<const char *>(data), len);
+            payload->concat(reinterpret_cast<const char *>(data), static_cast<unsigned int>(len));
 
             if (index + len == total)
             {

@@ -18,15 +18,21 @@ namespace EthernetConnection
         return ETH.localIP() != IPAddress(0, 0, 0, 0);
     }
 
-    static bool WaitForLocalIP(uint32_t timeoutMs)
+    static bool WaitForLocalIP(uint32_t timeoutMs, const IPAddress *expectedLocalIP = nullptr)
     {
         uint32_t startTimeMs = millis();
-        while (!HasValidLocalIP() && (millis() - startTimeMs < timeoutMs))
+        while ((millis() - startTimeMs < timeoutMs))
         {
+            if (HasValidLocalIP() &&
+                (expectedLocalIP == nullptr || ETH.localIP() == *expectedLocalIP))
+            {
+                break;
+            }
             delay(100);
         }
 
-        gEthernetConnected = HasValidLocalIP();
+        gEthernetConnected = HasValidLocalIP() &&
+                             (expectedLocalIP == nullptr || ETH.localIP() == *expectedLocalIP);
         return gEthernetConnected;
     }
 
@@ -116,7 +122,7 @@ namespace EthernetConnection
 
         if (ETH.config(localIP, gateway, subnet, dns, IPAddress(0, 0, 0, 0)))
         {
-            if (WaitForLocalIP(2000))
+            if (WaitForLocalIP(2000, &localIP))
             {
                 Logger::Info("Static IP configuration successful");
                 return true;
@@ -149,7 +155,7 @@ namespace EthernetConnection
 
         if (ETH.config(apipaIP, gateway, subnet))
         {
-            if (WaitForLocalIP(2000))
+            if (WaitForLocalIP(2000, &apipaIP))
             {
                 Logger::Info("APIPA configuration successful");
                 return true;
