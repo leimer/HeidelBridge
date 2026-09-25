@@ -100,10 +100,7 @@ void WebServer::Init()
             }
 
             auto *payload = static_cast<String *>(request->_tempObject);
-            for (size_t i = 0; i < len; ++i)
-            {
-                *payload += static_cast<char>(data[i]);
-            }
+            payload->concat(reinterpret_cast<const char *>(data), len);
 
             if (index + len == total)
             {
