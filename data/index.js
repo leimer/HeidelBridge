@@ -25,17 +25,13 @@ document.addEventListener("DOMContentLoaded", async function () {
         document.getElementById("mqtt-port").value = data["mqtt-port"];
         document.getElementById("mqtt-user").value = data["mqtt-user"];
         document.getElementById("mqtt-password").value = data["mqtt-password"];
-<<<<<<< HEAD
-        document.getElementById("board-type").value = data["board-type"] || "generic";
-=======
-        
+
         // Update static IP fields visibility
         updateStaticIPFieldsVisibility();
->>>>>>> 0f959c5 (Add ESP32-POE board support with ethernet and DHCP settings)
     } catch (error) {
         console.error(`Error: ${error.message}`);
     }
-    
+
     // Add event listener for static IP checkbox
     document.getElementById("ethernet-static-ip-enabled").addEventListener("change", updateStaticIPFieldsVisibility);
 });
@@ -67,8 +63,7 @@ function writeSettings() {
         "mqtt-server": document.getElementById("mqtt-server").value,
         "mqtt-port": parseInt(document.getElementById("mqtt-port").value),
         "mqtt-user": document.getElementById("mqtt-user").value,
-        "mqtt-password": document.getElementById("mqtt-password").value,
-        "board-type": document.getElementById("board-type").value
+        "mqtt-password": document.getElementById("mqtt-password").value
     };
     fetch("/api/settings_write", {
         method: "POST",

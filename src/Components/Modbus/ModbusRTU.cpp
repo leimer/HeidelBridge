@@ -7,45 +7,35 @@
 #include "../../Boards/Board.h"
 #include "ModbusRTU.h"
 
-<<<<<<< HEAD
 HardwareSerial gRs485Serial(1);                           // Define a Serial for UART1
 SemaphoreHandle_t gMutex = nullptr;                       // A mutex object for buss access
-=======
-// NOTE: ModbusClientRTU cannot be initialized as global variable because
-// BoardFactory::Instance()->GetBoard()->GetPinRts() requires BoardFactory to be
-// initialized first. Global initialization order is undefined in C++.
-// We use a pointer and initialize it in Init() instead.
-ModbusClientRTU *gModbusRTU = nullptr;                                         // ModbusRTU client instance (initialized in Init())
-HardwareSerial gRs485Serial(1);                                                // Define a Serial for UART1
-SemaphoreHandle_t gMutex = nullptr;                                            // A mutex object for buss access
->>>>>>> 0f959c5 (Add ESP32-POE board support with ethernet and DHCP settings)
 
 // Global pin variables for RTScallback (used only by dual-pin boards)
-// These must be global so the lambda can capture them by reference
+// These must be global because the callback cannot capture local state.
 static uint8_t gPinDE = 0;
 static uint8_t gPinRE = 0;
 
 // Helper function to explain Modbus error codes
-const char* GetModbusErrorDescription(uint8_t errorCode)
+const char *GetModbusErrorDescription(uint8_t errorCode)
 {
     switch (errorCode)
     {
-        case 0x00: return "SUCCESS - No error";
-        case 0x01: return "ILLEGAL FUNCTION - Function code not supported by wallbox";
-        case 0x02: return "ILLEGAL DATA ADDRESS - Register address invalid";
-        case 0x03: return "ILLEGAL DATA VALUE - Value out of range";
-        case 0x04: return "SLAVE DEVICE FAILURE - Wallbox internal error";
-        case 0x05: return "ACKNOWLEDGE - Wallbox needs more time (rare)";
-        case 0x06: return "SLAVE DEVICE BUSY - Wallbox busy, retry later";
-        case 0x07: return "NEGATIVE ACKNOWLEDGE - Wallbox cannot process";
-        case 0x08: return "MEMORY PARITY ERROR - Wallbox memory fault";
-        case 0xE0: return "TIMEOUT - No response from wallbox (check wiring/config)";
-        case 0xE1: return "INVALID SERVER - Wrong server ID configured";
-        case 0xE2: return "CRC ERROR - Communication error (noise/wiring issue)";
-        case 0xE3: return "FC MISMATCH - Response doesn't match request";
-        case 0xE4: return "SERVER ID MISMATCH - Wrong server responded";
-        case 0xE5: return "PACKET LENGTH ERROR - Truncated response";
-        default: return "UNKNOWN ERROR - Check eModbus documentation";
+    case 0x00: return "SUCCESS - No error";
+    case 0x01: return "ILLEGAL FUNCTION - Function code not supported by wallbox";
+    case 0x02: return "ILLEGAL DATA ADDRESS - Register address invalid";
+    case 0x03: return "ILLEGAL DATA VALUE - Value out of range";
+    case 0x04: return "SLAVE DEVICE FAILURE - Wallbox internal error";
+    case 0x05: return "ACKNOWLEDGE - Wallbox needs more time (rare)";
+    case 0x06: return "SLAVE DEVICE BUSY - Wallbox busy, retry later";
+    case 0x07: return "NEGATIVE ACKNOWLEDGE - Wallbox cannot process";
+    case 0x08: return "MEMORY PARITY ERROR - Wallbox memory fault";
+    case 0xE0: return "TIMEOUT - No response from wallbox (check wiring/config)";
+    case 0xE1: return "INVALID SERVER - Wrong server ID configured";
+    case 0xE2: return "CRC ERROR - Communication error (noise/wiring issue)";
+    case 0xE3: return "FC MISMATCH - Response doesn't match request";
+    case 0xE4: return "SERVER ID MISMATCH - Wrong server responded";
+    case 0xE5: return "PACKET LENGTH ERROR - Truncated response";
+    default: return "UNKNOWN ERROR - Check eModbus documentation";
     }
 }
 
@@ -66,8 +56,9 @@ void ModbusRTU::Init()
     uint8_t pinTx = BoardFactory::Instance()->GetBoard()->GetPinTx();
     uint8_t pinRx = BoardFactory::Instance()->GetBoard()->GetPinRx();
     bool dualPin = BoardFactory::Instance()->GetBoard()->HasDualPinRS485();
-    
+
     // Init serial connected to the RTU Modbus
+    Logger::Info("Starting RS485 hardware serial");
     RTUutils::prepareHardwareSerial(gRs485Serial);
     gRs485Serial.begin(
         Constants::HeidelbergWallbox::ModbusBaudrate,
@@ -78,45 +69,34 @@ void ModbusRTU::Init()
     // Create ModbusClientRTU with appropriate constructor
     if (dualPin)
     {
-        // Dual-pin boards (e.g., ESP32-POE-ISO): Use RTScallback for explicit DE+RE control
         gPinDE = BoardFactory::Instance()->GetBoard()->GetPinDE();
         gPinRE = BoardFactory::Instance()->GetBoard()->GetPinRE();
-        
-        // Define RTScallback as lambda for automatic RS485 direction control
-        // Called by ModbusClientRTU library when RTS state changes
-        // level: true = HIGH (transmit mode), false = LOW (receive mode)
-        auto rtsCallback = [](bool level) {
-            if (level)  // Transmit mode
+
+        auto rtsCallback = [](bool level)
+        {
+            if (level)
             {
-                digitalWrite(gPinDE, HIGH);  // DE = HIGH (driver ON)
-                digitalWrite(gPinRE, HIGH);  // /RE = HIGH (receiver OFF, active LOW)
+                digitalWrite(gPinDE, HIGH);
+                digitalWrite(gPinRE, HIGH);
             }
-            else  // Receive mode
+            else
             {
-                digitalWrite(gPinDE, LOW);   // DE = LOW (driver OFF)
-                digitalWrite(gPinRE, LOW);   // /RE = LOW (receiver ON, active LOW)
+                digitalWrite(gPinDE, LOW);
+                digitalWrite(gPinRE, LOW);
             }
         };
-        
-        gModbusRTU = new ModbusClientRTU(rtsCallback);
+
+        modbusClient = new ModbusClientRTU(rtsCallback);
     }
     else
     {
-        // Single-pin boards (e.g., ESP32, Lilygo): Let library handle DE pin directly
-        uint8_t pinDE = BoardFactory::Instance()->GetBoard()->GetPinDE();
-        gModbusRTU = new ModbusClientRTU(pinDE);
+        modbusClient = new ModbusClientRTU(BoardFactory::Instance()->GetBoard()->GetPinDE());
     }
-    
+
     // Start Modbus RTU
-<<<<<<< HEAD
     Logger::Trace("Creating Modbus RTU instance");
-    modbusClient = new ModbusClientRTU(BoardFactory::Instance()->GetBoard()->GetPinRts());
     modbusClient->setTimeout(Constants::HeidelbergWallbox::ModbusTimeoutMs);
-    modbusClient->begin(gRs485Serial); // Start ModbusRTU background task
-=======
-    gModbusRTU->setTimeout(Constants::HeidelbergWallbox::ModbusTimeoutMs);
-    gModbusRTU->begin(gRs485Serial);
->>>>>>> 0f959c5 (Add ESP32-POE board support with ethernet and DHCP settings)
+    modbusClient->begin(gRs485Serial);
 }
 
 // Reads multiple registers starting from the specified address
@@ -126,22 +106,17 @@ bool ModbusRTU::ReadRegisters(uint16_t startAddress, uint8_t numValues, uint8_t 
     uint8_t lastError = 0;
     uint8_t attemptNumber = 0;
 
-    Logger::Trace("ModbusRTU read: Server=%d, Addr=%d, Count=%d, FC=0x%02X", 
+    Logger::Trace("ModbusRTU read: Server=%d, Addr=%d, Count=%d, FC=0x%02X",
                   Constants::HeidelbergWallbox::ModbusServerId, startAddress, numValues, fc);
 
     while (numTries > 0)
     {
         attemptNumber++;
-        
+
         // Try to get the mutex
         if (xSemaphoreTake(gMutex, portMAX_DELAY))
         {
-<<<<<<< HEAD
             ModbusMessage response = modbusClient->syncRequest(
-=======
-            // RTScallback automatically handles mode switching
-            ModbusMessage response = gModbusRTU->syncRequest(
->>>>>>> 0f959c5 (Add ESP32-POE board support with ethernet and DHCP settings)
                 0,
                 Constants::HeidelbergWallbox::ModbusServerId,
                 (FunctionCode)fc,
@@ -152,7 +127,7 @@ bool ModbusRTU::ReadRegisters(uint16_t startAddress, uint8_t numValues, uint8_t 
             xSemaphoreGive(gMutex);
 
             lastError = response.getError();
-            
+
             if (lastError == SUCCESS)
             {
                 constexpr uint16_t startIndex = 3;
@@ -163,23 +138,20 @@ bool ModbusRTU::ReadRegisters(uint16_t startAddress, uint8_t numValues, uint8_t 
                 Logger::Trace("ModbusRTU read successful on attempt %d", attemptNumber);
                 return true;
             }
-            else
-            {
-                // Read failed - log error and delay before retry
-                Logger::Warning("ModbusRTU read attempt %d/%d: Error %d (0x%02X) - %s", 
-                              attemptNumber, 1 + Constants::ModbusRTU::NumReadRetries, 
-                              lastError, lastError, GetModbusErrorDescription(lastError));
-                delay(Constants::ModbusRTU::RetryDelayMs);
-            }
+
+            Logger::Warning("ModbusRTU read attempt %d/%d: Error %d (0x%02X) - %s",
+                            attemptNumber, 1 + Constants::ModbusRTU::NumReadRetries,
+                            lastError, lastError, GetModbusErrorDescription(lastError));
+            delay(Constants::ModbusRTU::RetryDelayMs);
         }
 
         numTries--;
     }
 
     // All read attempts failed
-    Logger::Error("ModbusRTU read FAILED after %d attempts: Error %d (0x%02X) - %s", 
+    Logger::Error("ModbusRTU read FAILED after %d attempts: Error %d (0x%02X) - %s",
                   attemptNumber, lastError, lastError, GetModbusErrorDescription(lastError));
-    
+
     gStatistics.NumModbusReadErrors++;
     for (uint8_t wordIndex = 0; wordIndex < numValues; ++wordIndex)
     {
@@ -195,22 +167,17 @@ bool ModbusRTU::WriteHoldRegister16(uint16_t address, uint16_t value)
     uint8_t lastError = 0;
     uint8_t attemptNumber = 0;
 
-    Logger::Debug("ModbusRTU write: Server=%d, Addr=%d, Value=%d (0x%04X)", 
+    Logger::Debug("ModbusRTU write: Server=%d, Addr=%d, Value=%d (0x%04X)",
                   Constants::HeidelbergWallbox::ModbusServerId, address, value, value);
 
     while (numTries > 0)
     {
         attemptNumber++;
-        
+
         // Try to get the mutex
         if (xSemaphoreTake(gMutex, portMAX_DELAY))
         {
-<<<<<<< HEAD
             ModbusMessage response = modbusClient->syncRequest(
-=======
-            // RTScallback automatically handles mode switching
-            ModbusMessage response = gModbusRTU->syncRequest(
->>>>>>> 0f959c5 (Add ESP32-POE board support with ethernet and DHCP settings)
                 0,
                 Constants::HeidelbergWallbox::ModbusServerId,
                 WRITE_HOLD_REGISTER,
@@ -221,29 +188,26 @@ bool ModbusRTU::WriteHoldRegister16(uint16_t address, uint16_t value)
             xSemaphoreGive(gMutex);
 
             lastError = response.getError();
-            
+
             if (lastError == SUCCESS)
             {
                 Logger::Trace("ModbusRTU write successful on attempt %d", attemptNumber);
                 return true;
             }
-            else
-            {
-                // Write failed - log error and delay before retry
-                Logger::Warning("ModbusRTU write attempt %d/%d: Error %d (0x%02X) - %s", 
-                              attemptNumber, 1 + Constants::ModbusRTU::NumWriteRetries, 
-                              lastError, lastError, GetModbusErrorDescription(lastError));
-                delay(Constants::ModbusRTU::RetryDelayMs);
-            }
+
+            Logger::Warning("ModbusRTU write attempt %d/%d: Error %d (0x%02X) - %s",
+                            attemptNumber, 1 + Constants::ModbusRTU::NumWriteRetries,
+                            lastError, lastError, GetModbusErrorDescription(lastError));
+            delay(Constants::ModbusRTU::RetryDelayMs);
         }
 
         numTries--;
     }
 
     // All write attempts failed
-    Logger::Error("ModbusRTU write FAILED after %d attempts: Error %d (0x%02X) - %s", 
+    Logger::Error("ModbusRTU write FAILED after %d attempts: Error %d (0x%02X) - %s",
                   attemptNumber, lastError, lastError, GetModbusErrorDescription(lastError));
-    
+
     gStatistics.NumModbusWriteErrors++;
     return false;
 }

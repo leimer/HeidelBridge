@@ -35,7 +35,7 @@ void Settings::ReadFromPersistentMemory()
     WifiPassword = gPreferences.getString("wifi_password");
     // Ethernet DHCP enabled by default, falls back to APIPA (169.254.x.x) if no DHCP server
     IsEthernetDhcpEnabled = gPreferences.getBool("eth_dhcp", true);
-    EthernetStaticIp = gPreferences.getString("eth_static_ip", "192.168.1.100");
+    EthernetStaticIp = gPreferences.getString("eth_static_ip", "192.168.1.250");
     EthernetGateway = gPreferences.getString("eth_gateway", "192.168.1.1");
     EthernetSubnet = gPreferences.getString("eth_subnet", "255.255.255.0");
     EthernetDns = gPreferences.getString("eth_dns", "8.8.8.8");
@@ -44,7 +44,6 @@ void Settings::ReadFromPersistentMemory()
     MqttServer = gPreferences.getString("mqtt_server");
     MqttUser = gPreferences.getString("mqtt_user");
     MqttPassword = gPreferences.getString("mqtt_password");
-    BoardType = gPreferences.getString("board_type", "generic");
 }
 
 // Write all settings to storage
@@ -65,7 +64,6 @@ void Settings::WriteToPersistentMemory()
     gPreferences.putString("mqtt_server", MqttServer);
     gPreferences.putString("mqtt_user", MqttUser);
     gPreferences.putString("mqtt_password", MqttPassword);
-    gPreferences.putString("board_type", BoardType);
 }
 
 // Prints all settings to the logger

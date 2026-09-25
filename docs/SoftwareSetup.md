@@ -51,28 +51,33 @@ To compile this project you will need to install VS Code and the PlatformIO exte
 Then follow these steps:
 
 - Start by cloning or downloading this repository.
-- Optional: change `board = ...` in platformio.ini to match the ESP32 board you are actually using.
 - Compile the project with `platformio run -e <environment>` (see build environments below).
 - Now connect your ESP32 via USB.
 - Upload the firmware with `platformio run -e <environment> -t upload`.
 
 ## Build Environments
 
-HeidelBridge supports two build environments:
+HeidelBridge supports four build environments:
 
-### Standard Build (`esp32`)
+### Generic ESP32 + MAX485 (`esp32`)
 
-This is the default build for production use with either a Generic ESP32 + MAX485 module or a LilyGo T-CAN485 board.
+This is the default build for production use with a generic ESP32 board and an external MAX485 module.
 
 **To compile:**
 
 ```bash
-pio run
+pio run -e esp32
 ```
 
-**Hardware selection:**
+### LilyGo T-CAN485 (`lilygo`)
 
-The hardware type is selected in the web interface during initial setup. After flashing, connect to the captive portal (`HeidelBridge Setup`) and choose either "Generic ESP32 + MAX485" or "LilyGo T-CAN485" under the Hardware section.
+This build environment targets the LilyGo T-CAN485 board with its onboard RS485 transceiver.
+
+**To compile:**
+
+```bash
+pio run -e lilygo
+```
 
 ### Olimex ESP32-POE-ISO + MOD-RS485 (`esp32-poe-iso`)
 
