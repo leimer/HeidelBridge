@@ -94,19 +94,22 @@ void WebServer::Init()
         {
             if (index == 0)
             {
-                mSettingsWriteBody = "";
-                mSettingsWriteBody.reserve(total);
+                auto *payload = new String();
+                payload->reserve(total);
+                request->_tempObject = payload;
             }
 
+            auto *payload = static_cast<String *>(request->_tempObject);
             for (size_t i = 0; i < len; ++i)
             {
-                mSettingsWriteBody += static_cast<char>(data[i]);
+                *payload += static_cast<char>(data[i]);
             }
 
             if (index + len == total)
             {
-                request->send(200, "application/json", HandleApiRequestSettingsWrite(request, mSettingsWriteBody));
-                mSettingsWriteBody = "";
+                request->send(200, "application/json", HandleApiRequestSettingsWrite(request, *payload));
+                delete payload;
+                request->_tempObject = nullptr;
             }
         });
 

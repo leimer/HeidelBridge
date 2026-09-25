@@ -26,9 +26,8 @@ void WifiManager::Start()
     {
         Logger::Debug("Board supports Ethernet, attempting connection...");
         EthernetConnection::Init();
-        
-        // Wait for ethernet connection with timeout
-        if (EthernetConnection::WaitForConnection(15))
+
+        if (EthernetConnection::IsConnected())
         {
             Logger::Info("Ethernet connection established at %s", EthernetConnection::GetLocalIP().c_str());
             // Start the web server without captive portal
@@ -37,7 +36,7 @@ void WifiManager::Start()
         }
         else
         {
-            Logger::Warning("Ethernet connection failed after 15 seconds, falling back to WiFi");
+            Logger::Warning("Ethernet connection unavailable, falling back to WiFi");
         }
     }
 

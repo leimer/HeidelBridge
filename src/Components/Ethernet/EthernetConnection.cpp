@@ -11,6 +11,23 @@ namespace EthernetConnection
     bool gDhcpFailed = false;
     bool gEventHandlerRegistered = false;
 
+    static bool HasValidLocalIP()
+    {
+        return ETH.localIP() != IPAddress(0, 0, 0, 0);
+    }
+
+    static bool WaitForLocalIP(uint32_t timeoutMs)
+    {
+        uint32_t startTimeMs = millis();
+        while (!HasValidLocalIP() && (millis() - startTimeMs < timeoutMs))
+        {
+            delay(100);
+        }
+
+        gEthernetConnected = HasValidLocalIP();
+        return gEthernetConnected;
+    }
+
     void EthernetEventHandler(WiFiEvent_t event)
     {
         switch (event)
@@ -86,15 +103,25 @@ namespace EthernetConnection
             Settings::Instance()->EthernetDns.c_str());
         
         IPAddress localIP, gateway, subnet, dns;
-        localIP.fromString(Settings::Instance()->EthernetStaticIp);
-        gateway.fromString(Settings::Instance()->EthernetGateway);
-        subnet.fromString(Settings::Instance()->EthernetSubnet);
-        dns.fromString(Settings::Instance()->EthernetDns);
+        if (!localIP.fromString(Settings::Instance()->EthernetStaticIp) ||
+            !gateway.fromString(Settings::Instance()->EthernetGateway) ||
+            !subnet.fromString(Settings::Instance()->EthernetSubnet) ||
+            !dns.fromString(Settings::Instance()->EthernetDns))
+        {
+            Logger::Error("Invalid static Ethernet IP configuration");
+            return false;
+        }
 
         if (ETH.config(localIP, gateway, subnet, dns))
         {
-            Logger::Info("Static IP configuration successful");
-            return true;
+            if (WaitForLocalIP(2000))
+            {
+                Logger::Info("Static IP configuration successful");
+                return true;
+            }
+
+            Logger::Error("Static IP configuration did not produce a usable address");
+            return false;
         }
         else
         {
@@ -120,8 +147,14 @@ namespace EthernetConnection
 
         if (ETH.config(apipaIP, gateway, subnet))
         {
-            Logger::Info("APIPA configuration successful");
-            return true;
+            if (WaitForLocalIP(2000))
+            {
+                Logger::Info("APIPA configuration successful");
+                return true;
+            }
+
+            Logger::Error("APIPA configuration did not produce a usable address");
+            return false;
         }
         else
         {
@@ -138,11 +171,12 @@ namespace EthernetConnection
         uint32_t startTime = millis();
         const uint32_t dhcpTimeout = 10000;
         
-        while (!gEthernetConnected && (millis() - startTime < dhcpTimeout))
+        while (!gEthernetConnected && !HasValidLocalIP() && (millis() - startTime < dhcpTimeout))
         {
             delay(100);
         }
 
+        gEthernetConnected = gEthernetConnected || HasValidLocalIP();
         return gEthernetConnected;
     }
 
