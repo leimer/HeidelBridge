@@ -38,3 +38,7 @@ bool Board::HasDualPinRS485()
 {
   return mDualPinRS485;
 }
+
+void Board::BeginEthernet()
+{
+}

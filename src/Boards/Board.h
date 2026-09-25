@@ -24,6 +24,7 @@ public:
   // Network capability interfaces - to be implemented by each board
   virtual bool HasWiFi() = 0;
   virtual bool HasEthernet() = 0;
+  virtual void BeginEthernet();
 
 private:
   uint8_t mPinRx, mPinTx;

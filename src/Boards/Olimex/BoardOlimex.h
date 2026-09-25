@@ -15,4 +15,5 @@ public:
   // Network capability interfaces
   virtual bool HasWiFi();
   virtual bool HasEthernet();
+  virtual void BeginEthernet();
 };

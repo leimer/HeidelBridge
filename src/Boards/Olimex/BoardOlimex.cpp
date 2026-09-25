@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <ETH.h>
 #include "Components/Logger/Logger.h"
 #include "../Board.h"
 #include "BoardOlimex.h"
@@ -49,4 +50,9 @@ bool BoardOlimex::HasWiFi()
 bool BoardOlimex::HasEthernet()
 {
   return true;
+}
+
+void BoardOlimex::BeginEthernet()
+{
+  ETH.begin(0, -1, 23, 18, ETH_PHY_LAN8720, ETH_CLOCK_GPIO0_IN);
 }

@@ -105,8 +105,6 @@ void WebServer::Init()
             if (index + len == total)
             {
                 request->send(200, "application/json", HandleApiRequestSettingsWrite(request, *payload));
-                delete payload;
-                request->_tempObject = nullptr;
             }
         });
 
@@ -209,7 +207,7 @@ String WebServer::HandleApiRequestSettingsRead(AsyncWebServerRequest *request)
 
     doc["device-name"] = Settings::Instance()->DeviceName;
     doc["wifi-ssid"] = Settings::Instance()->WifiSsid;
-    doc["wifi-password"] = Settings::Instance()->WifiPassword;
+    doc["wifi-password"] = "";
     doc["ethernet-dhcp-enabled"] = Settings::Instance()->IsEthernetDhcpEnabled;
     doc["ethernet-static-ip"] = Settings::Instance()->EthernetStaticIp;
     doc["ethernet-gateway"] = Settings::Instance()->EthernetGateway;
@@ -219,7 +217,7 @@ String WebServer::HandleApiRequestSettingsRead(AsyncWebServerRequest *request)
     doc["mqtt-server"] = Settings::Instance()->MqttServer;
     doc["mqtt-port"] = Settings::Instance()->MqttPort;
     doc["mqtt-user"] = Settings::Instance()->MqttUser;
-    doc["mqtt-password"] = Settings::Instance()->MqttPassword;
+    doc["mqtt-password"] = "";
 
     String jsonResponse;
     serializeJson(doc, jsonResponse);
@@ -250,7 +248,11 @@ String WebServer::HandleApiRequestSettingsWrite(AsyncWebServerRequest *request, 
     }
     if (doc["wifi-password"].is<String>())
     {
-        Settings::Instance()->WifiPassword = doc["wifi-password"].as<String>();
+        String wifiPassword = doc["wifi-password"].as<String>();
+        if (wifiPassword.length() > 0)
+        {
+            Settings::Instance()->WifiPassword = wifiPassword;
+        }
     }
     if (doc["ethernet-dhcp-enabled"].is<bool>())
     {
@@ -290,7 +292,11 @@ String WebServer::HandleApiRequestSettingsWrite(AsyncWebServerRequest *request, 
     }
     if (doc["mqtt-password"].is<String>())
     {
-        Settings::Instance()->MqttPassword = doc["mqtt-password"].as<String>();
+        String mqttPassword = doc["mqtt-password"].as<String>();
+        if (mqttPassword.length() > 0)
+        {
+            Settings::Instance()->MqttPassword = mqttPassword;
+        }
     }
 
     Settings::Instance()->WriteToPersistentMemory();

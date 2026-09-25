@@ -1,5 +1,7 @@
 #include <Arduino.h>
 #include <ETH.h>
+#include "../../Boards/BoardFactory.h"
+#include "../../Boards/Board.h"
 #include "../../Configuration/Constants.h"
 #include "../../Configuration/Settings.h"
 #include "EthernetConnection.h"
@@ -68,11 +70,7 @@ namespace EthernetConnection
     static void InitializePHY()
     {
         Logger::Debug("Starting ETH PHY with board-defined configuration...");
-#ifdef BOARD_OLIMEX
-        ETH.begin(0, -1, 23, 18, ETH_PHY_LAN8720, ETH_CLOCK_GPIO0_IN);
-#else
-        ETH.begin();
-#endif
+        BoardFactory::Instance()->GetBoard()->BeginEthernet();
     }
 
     // Wait for Ethernet link to establish
