@@ -51,6 +51,7 @@ To compile this project you will need to install VS Code and the PlatformIO exte
 Then follow these steps:
 
 - Start by cloning or downloading this repository.
+- If you change files in `data/`, run `./build-resources.sh` before building or uploading so the embedded web assets stay in sync.
 - Compile the project with `platformio run -e <environment>` (see build environments below).
 - Now connect your ESP32 via USB.
 - Upload the firmware with `platformio run -e <environment> -t upload`.

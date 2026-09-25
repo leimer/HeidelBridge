@@ -9,6 +9,7 @@ namespace EthernetConnection
 {
     bool gEthernetConnected = false;
     bool gDhcpFailed = false;
+    bool gEventHandlerRegistered = false;
 
     void EthernetEventHandler(WiFiEvent_t event)
     {
@@ -22,7 +23,7 @@ namespace EthernetConnection
             Logger::Info("ETH Connected");
             break;
         case ARDUINO_EVENT_ETH_GOT_IP:
-            Logger::Info("ETH Got IP via DHCP");
+            Logger::Info(Settings::Instance()->IsEthernetDhcpEnabled ? "ETH Got IP via DHCP" : "ETH Got IP (static)");
             Logger::Info("ETH MAC: %s", ETH.macAddress().c_str());
             Logger::Info("ETH IPv4: %s", ETH.localIP().toString().c_str());
             if (ETH.fullDuplex())
@@ -92,11 +93,7 @@ namespace EthernetConnection
 
         if (ETH.config(localIP, gateway, subnet, dns))
         {
-            gEthernetConnected = true;
             Logger::Info("Static IP configuration successful");
-            Logger::Info("ETH IPv4: %s", ETH.localIP().toString().c_str());
-            Logger::Info("ETH Gateway: %s", ETH.gatewayIP().toString().c_str());
-            Logger::Info("ETH Subnet: %s", ETH.subnetMask().toString().c_str());
             return true;
         }
         else
@@ -120,12 +117,10 @@ namespace EthernetConnection
         IPAddress subnet(255, 255, 0, 0);
         
         Logger::Info("Configuring APIPA IP: %s", apipaIP.toString().c_str());
-        
+
         if (ETH.config(apipaIP, gateway, subnet))
         {
-            gEthernetConnected = true;
             Logger::Info("APIPA configuration successful");
-            Logger::Info("ETH IPv4: %s", ETH.localIP().toString().c_str());
             return true;
         }
         else
@@ -155,9 +150,15 @@ namespace EthernetConnection
     void Init()
     {
         Logger::Info("Initializing Ethernet...");
+        gEthernetConnected = false;
+        gDhcpFailed = false;
         
-        // Register event handler
-        WiFi.onEvent(EthernetEventHandler);
+        // Register event handler once
+        if (!gEventHandlerRegistered)
+        {
+            WiFi.onEvent(EthernetEventHandler);
+            gEventHandlerRegistered = true;
+        }
 
         // Initialize PHY
         InitializePHY();

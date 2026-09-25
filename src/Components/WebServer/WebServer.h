@@ -28,7 +28,7 @@ private:
     String HandleApiRequestSettingsRead(AsyncWebServerRequest *request);
 
     // Handles the API request
-    String HandleApiRequestSettingsWrite(AsyncWebServerRequest *request, uint8_t *data);
+    String HandleApiRequestSettingsWrite(AsyncWebServerRequest *request, const String &payload);
 
     // Handles the API request
     String HandleApiRequestReboot();
@@ -37,5 +37,6 @@ private:
     bool HandleFirmwareUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final);
 
 private:
+    String mSettingsWriteBody{};
     bool mHadActivity{};
 };

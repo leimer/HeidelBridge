@@ -86,11 +86,29 @@ void WebServer::Init()
                   { request->send(200, "application/json", HandleApiRequestGetWifiScanStatus()); });
     gWebServer.on("/api/settings_read", HTTP_GET, [this](AsyncWebServerRequest *request)
                   { request->send(200, "application/json", HandleApiRequestSettingsRead(request)); });
-    gWebServer.onRequestBody([this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
-                             {
-                    if (request->url() == "/api/settings_write") {
-                        request->send(200, "application/json", HandleApiRequestSettingsWrite(request, data));
-                    } });
+    gWebServer.on(
+        "/api/settings_write", HTTP_POST,
+        [](AsyncWebServerRequest *request) {},
+        nullptr,
+        [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+        {
+            if (index == 0)
+            {
+                mSettingsWriteBody = "";
+                mSettingsWriteBody.reserve(total);
+            }
+
+            for (size_t i = 0; i < len; ++i)
+            {
+                mSettingsWriteBody += static_cast<char>(data[i]);
+            }
+
+            if (index + len == total)
+            {
+                request->send(200, "application/json", HandleApiRequestSettingsWrite(request, mSettingsWriteBody));
+                mSettingsWriteBody = "";
+            }
+        });
 
     gWebServer.on("/api/reboot", HTTP_POST, [this](AsyncWebServerRequest *request)
                   { request->send(200, "application/json", HandleApiRequestReboot()); });
@@ -209,12 +227,12 @@ String WebServer::HandleApiRequestSettingsRead(AsyncWebServerRequest *request)
 }
 
 // Handles the API request
-String WebServer::HandleApiRequestSettingsWrite(AsyncWebServerRequest *request, uint8_t *data)
+String WebServer::HandleApiRequestSettingsWrite(AsyncWebServerRequest *request, const String &payload)
 {
     Logger::Debug("Received REST API request: write settings");
 
     JsonDocument jsonBuffer;
-    DeserializationError error = deserializeJson(jsonBuffer, (const char *)data);
+    DeserializationError error = deserializeJson(jsonBuffer, payload);
     if (error)
     {
         Logger::Error("Failed to parse JSON");
